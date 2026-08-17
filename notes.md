@@ -106,6 +106,10 @@ make verify 2>&1 | tee verify_after.txt
 make dbt-test
 ```
 
+> ⚠️ Trên máy mới phải chạy `make seed-extra` rồi `make compact` **trước** `make verify`, nếu không
+> verify dừng bằng `IOException` ở bước kiểm tra dashboard. Xem mục "Cách tái lập kết quả" đầu
+> `REPORT.md`.
+
 ```
   BẢNG                  ỔN ĐỊNH          SỐ HÀNG     KỲ VỌNG   GHI CHÚ
   ──────────────────────────────────────────────────────────────────────────
@@ -185,3 +189,4 @@ Khi tiếp nhận một hệ thống chưa quen, tôi sẽ kiểm tra điều n�
 - ☑ Không đụng file cấm sửa — `expected/`, `seed/generate.py`, `tools/{verify,explain,common}.py`
 - ☑ `.venv/`, `warehouse.duckdb`, `data/`, `.omc/` đều nằm trong `.gitignore`
 - ☑ Đã push lên remote
+- ☑ Ghi rõ trình tự tái lập (`seed-extra` → `compact` → `verify`) ở đầu `REPORT.md`

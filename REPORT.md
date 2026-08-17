@@ -4,6 +4,35 @@
 
 ---
 
+## Cách tái lập kết quả trên máy mới
+
+```bash
+make setup        # venv + thư viện + sinh 14 ngày seed
+make seed-extra   # ~30s — sinh data/gold_events/ cho bài mở rộng A
+make compact      # bố trí lại thành data/gold_events_v2/
+make verify       # 4/4 tiêu chí đạt
+make crash-test   # bài mở rộng B: ĐẠT
+```
+
+> ⚠️ **Phải chạy `make seed-extra` và `make compact` trước `make verify`.**
+>
+> `expected/dashboard_baseline.json` được commit sẵn trong repo gốc, nên `tools/verify.py:231`
+> **luôn** gọi `dashboard_check()`; hàm này lại không bắt lỗi khi dataset Parquet chưa tồn tại
+> (`tools/verify.py:125-132`). Trong khi đó `data/` nằm trong `.gitignore` — theo đúng thiết kế của
+> lab, vì `RUBRIC.md` trừ 3 điểm nếu nộp kèm thư mục này.
+>
+> Hệ quả: trên một bản clone mới, `make verify` sẽ dừng bằng `IOException: No files found` thay vì
+> in bảng chấm. Điều này đúng với **cả repo gốc** (khi đó thiếu `data/gold_events/`) lẫn bản đã sửa
+> (thiếu `data/gold_events_v2/`) — tôi đã kiểm chứng cả hai trường hợp. Đây là đặc tính sẵn có của
+> lab, không phải hệ quả của các thay đổi trong bài này; chỉ khác ở chỗ bản đã sửa cần thêm một
+> lệnh `make compact`, vì dataset tối ưu là **sản phẩm** của bài mở rộng A chứ không phải dữ liệu
+> nguồn.
+>
+> Tôi không commit `data/gold_events_v2/` (3,8 MB) để tránh mục trừ điểm nói trên, và không sửa
+> `tools/verify.py` vì đó là file nằm trong danh sách cấm sửa của `RUBRIC.md`.
+
+---
+
 ## 0 · Kết quả `make verify`
 
 <details>
