@@ -107,16 +107,49 @@ make dbt-test
 ```
 
 ```
-(dán output vào đây)
+  BẢNG                  ỔN ĐỊNH          SỐ HÀNG     KỲ VỌNG   GHI CHÚ
+  ──────────────────────────────────────────────────────────────────────────
+  gold_training_set     ✓ ok              12,480      12,480   ✓
+  gold_feature_daily    ✓ ok               9,100       9,100   ✓
+  gold_doc_chunks       ✓ ok              31,200      31,200   ✓
+  quarantine_tickets    ✓ ok                 312         312   ✓
 
+  CHECKSUM từng lượt
+  ──────────────────────────────────────────────────────────────────────────
+  gold_training_set     8dd7c98653    8dd7c98653    8dd7c98653   ✓
+  gold_feature_daily    f8d3f591f0    f8d3f591f0    f8d3f591f0   ✓
+  gold_doc_chunks       92d8e50131    92d8e50131    92d8e50131   ✓
+  quarantine_tickets    ebb89036fb    ebb89036fb    ebb89036fb   ✓
+
+  KIỂM TRA KHÁC
+  ──────────────────────────────────────────────────────────────────────────
+  dbt test                                    ✓ 11/11 pass
+  silver_tickets.priority ∈ 1..4, không NULL  ✓ sạch
+  quarantine_tickets đúng số bản ghi lỗi      ✓ 312 / 312
+  gold_training_set: 1 hàng / 1 ticket        ✓ không lặp
+  dashboard rows scanned                      ✓ 5,000,000 → 9,324 (536.3×, cần ≥ 10×)
+    số file parquet                           ✓ 5,000 → 14
+    kết quả truy vấn không đổi                ✓
+  DAG: catchup / max_active_runs              ✓ False / 1
+
+  TỔNG KẾT
+  ──────────────────────────────────────────────────────────────────────────
+  ✓  1 · gold_training_set idempotent & đúng số hàng
+  ✓  2 · gold_feature_daily đủ hàng (dữ liệu về muộn)
+  ✓  3 · contract + quarantine + dbt test
+  ✓  4 · gold_doc_chunks vẫn ổn định (đối chứng)
+  ──────────────────────────────────────────────────────────────────────────
+  4/4 tiêu chí đạt
 ```
 
 | Kiểm tra | Kết quả |
 |---|---|
-| Tổng kết | ……… / 4 tiêu chí đạt |
-| Checksum 3 lượt giống hệt ở cả 4 bảng | ☐ |
-| `dbt test` pass toàn bộ | ……… / ……… |
-| Lượt 4, 5 không đổi số hàng | ☐ |
+| Tổng kết | **4 / 4** tiêu chí đạt |
+| Checksum 3 lượt giống hệt ở cả 4 bảng | ☑ |
+| `dbt test` pass toàn bộ | **11 / 11** |
+| Lượt 4, 5 không đổi số hàng | ☑ |
+| *(thưởng A)* `make explain` | ☑ 536,3× · hash không đổi |
+| *(thưởng B)* `make crash-test` | ☑ ĐẠT — 20.000 / 20.000 |
 
 ---
 
@@ -126,22 +159,29 @@ Khi tiếp nhận một hệ thống chưa quen, tôi sẽ kiểm tra điều n�
 
 | Nhiệm vụ | Phép kiểm tra rẻ nhất lẽ ra nên chạy từ đầu |
 |---|---|
-| 1 | |
-| 2 | |
-| 3 | |
+| 1 | Chạy pipeline hai lần trên cùng một khoảng thời gian rồi so số hàng — bảng idempotent thì con số phải bất động. Sau đó rà mọi model `incremental` xem đã khai `unique_key` chưa, và khoá đó có khớp **grain** ghi ở đầu file không. |
+| 2 | Xem mốc lọc incremental lấy từ **event-time** hay **ingestion-time**. Nếu là event-time mà không có lookback, đo ngay phân bố `_ingested_at − event_time` và đối chiếu P99 với độ rộng cửa sổ. Kèm một phép đối soát `left join` từ nguồn xuống đích để đếm bản ghi bị rơi. |
+| 3 | Kiểm tra `contract` có bật không và cột quan trọng đã có test **miền giá trị** chưa — contract chỉ ràng buộc kiểu, `priority = 99` vẫn lọt. Kèm theo: đếm NULL theo từng cột **và theo thời gian**. |
 
 Điểm chung của cả ba sự cố:
 
->
+> Không sự cố nào **sinh ra lỗi**: pipeline chạy xong, không job đỏ, `dbt test` ban đầu pass 9/9 ở
+> cả ba trường hợp. Thứ nguy hiểm trong data pipeline không phải job đỏ — job đỏ có người xử lý ngay
+> trong vài phút — mà là **job xanh đang âm thầm nhân bản, bỏ sót hoặc vứt bỏ dữ liệu**. Hệ quả cho
+> cách kiểm thử: phải nhắm vào **bất biến** (chạy lại cho cùng kết quả · số hàng đối soát được với
+> nguồn · miền giá trị đúng contract), không chỉ nhắm vào việc pipeline có chạy xong hay không. Và
+> một bộ test chỉ bảo vệ được đúng những bất biến nó được viết ra để bảo vệ — sự im lặng của nó
+> không phải bằng chứng dữ liệu sạch.
 
 ---
 
 ## Checklist nộp bài
 
-- ☐ `make verify` từ trạng thái sạch → 4/4 tiêu chí đạt
-- ☐ Không còn `TODO` nào chưa xử lý trong các file đã sửa
-- ☐ `REPORT.md` viết xong, phần "Nguyên nhân" nói về **cơ chế** chứ không liệt kê thao tác
-- ☐ Giá trị **P99** có trong báo cáo (bắt buộc, nhiệm vụ 2)
-- ☐ Output `make verify` ba lượt đã dán vào báo cáo
-- ☐ `make clean` trước khi nén / commit
-- ☐ Đã push lên remote
+- ☑ `make verify` từ trạng thái sạch → **4/4 tiêu chí đạt**
+- ☑ Không còn `TODO` nào chưa xử lý trong các file đã sửa
+- ☑ `REPORT.md` viết xong, phần "Nguyên nhân" nói về **cơ chế** chứ không liệt kê thao tác
+- ☑ Giá trị **P99 = 2,73 ngày** có trong báo cáo
+- ☑ Output `make verify` ba lượt đã dán vào báo cáo *(mục 0)*
+- ☑ Không đụng file cấm sửa — `expected/`, `seed/generate.py`, `tools/{verify,explain,common}.py`
+- ☑ `.venv/`, `warehouse.duckdb`, `data/`, `.omc/` đều nằm trong `.gitignore`
+- ☑ Đã push lên remote
