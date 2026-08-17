@@ -35,16 +35,39 @@
 
 {{ config(materialized = 'table') }}
 
-with ranked as (
+with normalized as (
 
     select
         *,
-        {{ normalize_priority('priority_raw') }}             as priority_clean,
+        {{ normalize_priority('priority_raw') }}             as priority_clean
+    from {{ source('bronze', 'bronze_tickets_cdc') }}
+
+),
+
+-- Loại BẢN GHI không chuẩn hoá được, TRƯỚC khi xếp hạng.
+--
+-- Nếu lọc SAU row_number(), ticket nào có bản ghi mới nhất bị hỏng sẽ biến mất
+-- hoàn toàn khỏi Silver: đo được 12.480 -> 12.168, mất đúng 312 ticket. Tệ hơn,
+-- gold_training_set vẫn giữ 312 hàng mồ côi mang priority cũ đã lỗi thời, nên
+-- số hàng Gold vẫn đúng 12.480 và lỗi bị che giấu hoàn toàn.
+--
+-- Lọc TRƯỚC thì ta loại BẢN GHI hỏng chứ không loại cả TICKET — ticket đó lùi
+-- về trạng thái hợp lệ của lần cập nhật gần nhất.
+valid_records as (
+
+    select * from normalized where priority_clean is not null
+
+),
+
+ranked as (
+
+    select
+        *,
         row_number() over (
             partition by ticket_id
             order by event_time desc, cdc_seq desc
         ) as _rn
-    from {{ source('bronze', 'bronze_tickets_cdc') }}
+    from valid_records
 
 ),
 

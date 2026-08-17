@@ -6,7 +6,9 @@
     trong Airflow, và hai tham số của DAG quyết định điều gì xảy ra sau đó.
 
     `make verify` đọc file này bằng AST (không import) và kiểm tra hai
-    tham số ở phần TODO bên dưới.
+    tham số `catchup` / `max_active_runs` bên dưới.
+
+    Đã xử lý (phiếu #1041): catchup=False, max_active_runs=1.
 """
 
 from __future__ import annotations
@@ -30,11 +32,16 @@ with DAG(
     default_args=DEFAULT_ARGS,
     tags=["ai-support", "daily"],
     # ------------------------------------------------------------------
-    # TODO (nhiệm vụ 1): hai tham số dưới đây quyết định chuyện gì xảy ra
-    # khi ai đó bấm Clear Task, và khi DAG bị dồn nhiều lần chạy cùng lúc.
-    # Đọc lại triệu chứng ở phiếu #1041 rồi đặt lại cho đúng.
-    catchup=True,
-    # max_active_runs=?
+    # Hai tham số này KHÔNG phải root cause — root cause nằm ở config() của
+    # model gold_training_set. Chúng chỉ giảm tần suất kích hoạt lỗi.
+    #
+    # catchup=False: start_date lùi về 2026-08-03. Để True thì mỗi lần DAG được
+    #   bật lại, Airflow tự xếp hàng chạy bù toàn bộ lịch sử — mỗi run bù là một
+    #   lượt ghi nữa vào bảng đích.
+    # max_active_runs=1: chặn hai run ghi đồng thời vào cùng một bảng, tình
+    #   huống mà thao tác Clear Task rất dễ tạo ra.
+    catchup=False,
+    max_active_runs=1,
     # ------------------------------------------------------------------
 ) as dag:
 

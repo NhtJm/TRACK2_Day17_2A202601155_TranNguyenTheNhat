@@ -29,9 +29,20 @@
 --   rõ hai vấn đề này tách nhau.
 -- ---------------------------------------------------------------------------
 
+-- Grain của bảng là 1 hàng / 1 cặp (event_date, customer_id) — nên unique_key
+-- phải là CẢ HAI cột, không phải một cột.
+--
+-- Hai thay đổi dưới đây bắt buộc đi cùng nhau:
+--   1. lookback window 3 ngày (xem mệnh đề where ở cuối file) để bắt được dữ
+--      liệu về muộn — căn cứ P99 độ trễ ingest đo được là 2,73 ngày;
+--   2. unique_key composite + merge, vì window rộng khiến cùng một cặp được
+--      tính lại ở nhiều lượt chạy. Thiếu ý này thì kết quả cộng dồn thay vì
+--      thay thế, và bảng mất tính ổn định (đo được: 38.152 hàng cho 9.100 cặp).
 {{ config(
-    materialized     = 'incremental',
-    on_schema_change = 'fail'
+    materialized         = 'incremental',
+    unique_key           = ['event_date', 'customer_id'],
+    incremental_strategy = 'merge',
+    on_schema_change     = 'fail'
 ) }}
 
 select
@@ -49,7 +60,9 @@ select
 from {{ ref('silver_events') }}
 
 {% if is_incremental() %}
-where event_date > (select max(event_date) from {{ this }})
+-- Lookback 3 ngày: làm tròn lên từ P99 = 2,73 ngày (max = 2,94). Mốc cũ
+-- `> max(event_date)` chỉ tiến về phía trước nên dữ liệu tới muộn bị bỏ vĩnh viễn.
+where event_date >= (select max(event_date) - interval 3 day from {{ this }})
 {% endif %}
 
 group by 1, 2, 3, 4

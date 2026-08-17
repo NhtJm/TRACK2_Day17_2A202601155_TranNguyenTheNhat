@@ -1,0 +1,1616 @@
+<title>Runbook Chẩn Đoán Pipeline</title>
+<style>
+  :root {
+    --ground:      #F2F4F4;
+    --surface:     #FFFFFF;
+    --surface-alt: #E9EDEC;
+    --ink:         #17201F;
+    --ink-soft:    #566461;
+    --ink-faint:   #7C8A87;
+    --rule:        #D6DEDC;
+    --rule-strong: #B4C0BD;
+    --accent:      #0E5A63;
+    --accent-ink:  #FFFFFF;
+    --accent-wash: #DFECED;
+
+    --bronze:      #9C5B2E;
+    --silver:      #6E7A85;
+    --gold:        #A8801A;
+
+    --pass:        #2C6E49;
+    --fail:        #A32F2F;
+    --warn:        #A8801A;
+    --pass-wash:   #E2EFE7;
+    --fail-wash:   #F7E6E4;
+    --warn-wash:   #F6EEDC;
+
+    --code-bg:     #18211F;
+    --code-ink:    #DCE5E2;
+    --code-dim:    #7E9089;
+    --code-key:    #7FC7C1;
+    --code-str:    #D2A96A;
+
+    --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    --font-body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+    --shadow: 0 1px 2px rgba(23,32,31,.05), 0 6px 18px -10px rgba(23,32,31,.18);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:      #101614;
+      --surface:     #17201F;
+      --surface-alt: #1D2827;
+      --ink:         #E4EAE8;
+      --ink-soft:    #9DAAA6;
+      --ink-faint:   #77857F;
+      --rule:        #2A3634;
+      --rule-strong: #3B4A47;
+      --accent:      #58C3CC;
+      --accent-ink:  #0B1A1C;
+      --accent-wash: #14322F;
+
+      --bronze:      #CB8E5F;
+      --silver:      #9DAAB5;
+      --gold:        #D9B44A;
+
+      --pass:        #74C593;
+      --fail:        #E4837A;
+      --warn:        #D9B44A;
+      --pass-wash:   #162B21;
+      --fail-wash:   #2E1C1B;
+      --warn-wash:   #2B2415;
+
+      --code-bg:     #0B1110;
+      --code-ink:    #D3DEDA;
+
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 22px -12px rgba(0,0,0,.7);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground:      #101614;
+    --surface:     #17201F;
+    --surface-alt: #1D2827;
+    --ink:         #E4EAE8;
+    --ink-soft:    #9DAAA6;
+    --ink-faint:   #77857F;
+    --rule:        #2A3634;
+    --rule-strong: #3B4A47;
+    --accent:      #58C3CC;
+    --accent-ink:  #0B1A1C;
+    --accent-wash: #14322F;
+
+    --bronze:      #CB8E5F;
+    --silver:      #9DAAB5;
+    --gold:        #D9B44A;
+
+    --pass:        #74C593;
+    --fail:        #E4837A;
+    --warn:        #D9B44A;
+    --pass-wash:   #162B21;
+    --fail-wash:   #2E1C1B;
+    --warn-wash:   #2B2415;
+
+    --code-bg:     #0B1110;
+    --code-ink:    #D3DEDA;
+
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 22px -12px rgba(0,0,0,.7);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 16.5px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 24px 96px;
+    display: grid;
+    grid-template-columns: 210px minmax(0, 1fr);
+    gap: 56px;
+    align-items: start;
+  }
+
+  /* ---------------------------------------------------------- masthead */
+  .masthead {
+    grid-column: 1 / -1;
+    border-bottom: 2px solid var(--ink);
+    padding: 52px 0 26px;
+    margin-bottom: 44px;
+  }
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0 0 14px;
+  }
+  h1 {
+    font-family: var(--font-display);
+    font-size: clamp(34px, 5.4vw, 56px);
+    line-height: 1.06;
+    font-weight: 600;
+    letter-spacing: -.015em;
+    margin: 0 0 16px;
+    text-wrap: balance;
+  }
+  .standfirst {
+    font-size: 18.5px;
+    line-height: 1.6;
+    color: var(--ink-soft);
+    max-width: 62ch;
+    margin: 0 0 26px;
+  }
+  .masthead-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 28px;
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--ink-soft);
+  }
+  .masthead-meta b { color: var(--ink); font-weight: 600; }
+
+  /* ---------------------------------------------------------------- toc */
+  .toc {
+    position: sticky;
+    top: 24px;
+    font-size: 13.5px;
+    line-height: 1.4;
+    border-left: 1px solid var(--rule);
+    padding-left: 18px;
+  }
+  .toc h2 {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0 0 14px;
+    font-weight: 600;
+  }
+  .toc ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
+  .toc a { color: var(--ink-soft); text-decoration: none; display: block; }
+  .toc a:hover, .toc a:focus-visible { color: var(--accent); }
+  .toc .num {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--ink-faint);
+    margin-right: 7px;
+  }
+  .toc .prog {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--rule);
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--ink-soft);
+  }
+  .prog-bar {
+    height: 4px;
+    background: var(--surface-alt);
+    border-radius: 2px;
+    margin-top: 8px;
+    overflow: hidden;
+  }
+  .prog-bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .3s; }
+
+  /* ------------------------------------------------------------ content */
+  main { min-width: 0; }
+
+  section { margin-bottom: 68px; scroll-margin-top: 20px; }
+
+  h2 {
+    font-family: var(--font-display);
+    font-size: clamp(25px, 3.2vw, 33px);
+    line-height: 1.2;
+    font-weight: 600;
+    letter-spacing: -.012em;
+    margin: 0 0 8px;
+    text-wrap: balance;
+  }
+  h2 .sec-num {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    letter-spacing: .1em;
+    color: var(--accent);
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+  h3 {
+    font-family: var(--font-body);
+    font-size: 17px;
+    font-weight: 650;
+    letter-spacing: -.005em;
+    margin: 34px 0 10px;
+  }
+  h4 {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    font-weight: 600;
+    margin: 26px 0 10px;
+  }
+  p { margin: 0 0 14px; max-width: 68ch; }
+  .lede { font-size: 17.5px; color: var(--ink-soft); max-width: 66ch; }
+
+  ul, ol { max-width: 68ch; padding-left: 22px; margin: 0 0 16px; }
+  li { margin-bottom: 7px; }
+
+  a { color: var(--accent); }
+
+  code {
+    font-family: var(--font-mono);
+    font-size: .875em;
+    background: var(--surface-alt);
+    padding: 1.5px 5px;
+    border-radius: 3px;
+    border: 1px solid var(--rule);
+  }
+
+  pre {
+    background: var(--code-bg);
+    color: var(--code-ink);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    line-height: 1.6;
+    padding: 16px 18px;
+    border-radius: 5px;
+    overflow-x: auto;
+    margin: 0 0 18px;
+    tab-size: 2;
+  }
+  pre code { background: none; border: 0; padding: 0; font-size: inherit; color: inherit; }
+  pre .c { color: var(--code-dim); }
+  pre .k { color: var(--code-key); }
+  pre .s { color: var(--code-str); }
+
+  .filename {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--ink-soft);
+    background: var(--surface-alt);
+    border: 1px solid var(--rule);
+    border-bottom: 0;
+    border-radius: 5px 5px 0 0;
+    padding: 7px 14px;
+    display: inline-block;
+    margin-bottom: 0;
+  }
+  .filename + pre { border-radius: 0 5px 5px 5px; margin-top: 0; }
+
+  /* ------------------------------------------------------------ tickets */
+  .ticket {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--bronze);
+    border-radius: 0 5px 5px 0;
+    padding: 18px 22px;
+    margin: 0 0 24px;
+    box-shadow: var(--shadow);
+    max-width: 68ch;
+  }
+  .ticket .tno {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--bronze);
+    font-weight: 600;
+    display: block;
+    margin-bottom: 8px;
+  }
+  .ticket p { margin: 0; font-family: var(--font-display); font-size: 18px; font-style: italic; color: var(--ink); }
+
+  /* ------------------------------------------------------------- boxes */
+  .note, .warn-box, .key {
+    border-radius: 5px;
+    padding: 15px 18px;
+    margin: 0 0 20px;
+    max-width: 68ch;
+    font-size: 15.5px;
+  }
+  .note { background: var(--accent-wash); border-left: 3px solid var(--accent); }
+  .warn-box { background: var(--warn-wash); border-left: 3px solid var(--warn); }
+  .key { background: var(--surface); border: 1px solid var(--rule-strong); border-left: 3px solid var(--ink); box-shadow: var(--shadow); }
+  .note p:last-child, .warn-box p:last-child, .key p:last-child { margin-bottom: 0; }
+  .box-label {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+    font-weight: 700;
+    display: block;
+    margin-bottom: 7px;
+  }
+  .note .box-label { color: var(--accent); }
+  .warn-box .box-label { color: var(--warn); }
+  .key .box-label { color: var(--ink); }
+
+  /* ------------------------------------------------------------ tables */
+  .table-scroll { overflow-x: auto; margin: 0 0 20px; }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 14.5px;
+    font-variant-numeric: tabular-nums;
+  }
+  th, td {
+    text-align: left;
+    padding: 9px 14px 9px 0;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+  }
+  th {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    font-weight: 600;
+    border-bottom: 1px solid var(--rule-strong);
+    white-space: nowrap;
+  }
+  td.num { text-align: right; font-family: var(--font-mono); font-size: 13.5px; padding-right: 22px; }
+  th.num { text-align: right; padding-right: 22px; }
+
+  .tier { font-family: var(--font-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; font-weight: 700; }
+  .tier.b { color: var(--bronze); }
+  .tier.s { color: var(--silver); }
+  .tier.g { color: var(--gold); }
+
+  .pass { color: var(--pass); font-weight: 650; }
+  .fail { color: var(--fail); font-weight: 650; }
+
+  /* ---------------------------------------------------------- checklist */
+  .steps { list-style: none; padding: 0; margin: 0 0 22px; max-width: 68ch; display: flex; flex-direction: column; gap: 2px; }
+  .steps li {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 9px 12px;
+    border-radius: 4px;
+    margin: 0;
+    transition: background .15s;
+  }
+  .steps li:hover { background: var(--surface-alt); }
+  .steps input[type="checkbox"] {
+    margin: 5px 0 0;
+    width: 15px;
+    height: 15px;
+    accent-color: var(--accent);
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+  .steps label { cursor: pointer; flex: 1; }
+  .steps input:checked + label { color: var(--ink-faint); text-decoration: line-through; text-decoration-color: var(--rule-strong); }
+
+  /* ------------------------------------------------------------ details */
+  details {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 5px;
+    margin: 0 0 20px;
+    box-shadow: var(--shadow);
+  }
+  details[open] { border-color: var(--rule-strong); }
+  summary {
+    cursor: pointer;
+    padding: 13px 18px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--accent);
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+  }
+  summary::-webkit-details-marker { display: none; }
+  summary::before {
+    content: "▸";
+    font-size: 11px;
+    transition: transform .15s;
+    display: inline-block;
+  }
+  details[open] summary::before { transform: rotate(90deg); }
+  summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .details-body { padding: 2px 18px 6px; border-top: 1px solid var(--rule); }
+  .details-body > :first-child { margin-top: 16px; }
+
+  /* --------------------------------------------------------- flow chart */
+  .flow {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    line-height: 1.75;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 5px;
+    padding: 18px;
+    overflow-x: auto;
+    margin: 0 0 22px;
+    white-space: pre;
+    color: var(--ink-soft);
+  }
+
+  /* ------------------------------------------------------------- misc */
+  hr { border: 0; border-top: 1px solid var(--rule); margin: 40px 0; }
+
+  .q { font-weight: 600; margin-bottom: 4px; }
+  .a { color: var(--ink-soft); margin-bottom: 18px; }
+
+  .footer {
+    grid-column: 1 / -1;
+    border-top: 2px solid var(--ink);
+    padding-top: 20px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--ink-faint);
+  }
+
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+
+  @media (max-width: 900px) {
+    .wrap { grid-template-columns: 1fr; gap: 0; }
+    .toc { position: static; border-left: 0; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); padding: 20px 0; margin-bottom: 40px; }
+    .toc ol { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px 20px; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">AICB-P2T2 · Ngày 17 · Chương 4: Hạ Tầng</p>
+    <h1>Runbook chẩn đoán đường ống dữ liệu</h1>
+    <p class="standfirst">
+      Pipeline chạy được, không lỗi đỏ, <code>dbt test</code> pass 9/9 — và vẫn đang âm thầm nhân bản,
+      bỏ sót và vứt bỏ dữ liệu. Đây là bản hướng dẫn từng bước để bạn tự tìm ra ba sự cố đó,
+      sửa chúng, và viết được bản báo cáo giải thích cơ chế.
+    </p>
+    <div class="masthead-meta">
+      <span><b>120</b> phút</span>
+      <span><b>100</b> điểm + <b>10</b> thưởng</span>
+      <span>DuckDB · dbt · Parquet</span>
+      <span>Công cụ phản hồi: <b>make verify</b></span>
+    </div>
+  </header>
+
+  <nav class="toc" aria-label="Mục lục">
+    <h2>Trình tự</h2>
+    <ol>
+      <li><a href="#s0"><span class="num">00</span>Trước khi bắt đầu</a></li>
+      <li><a href="#s1"><span class="num">01</span>Setup &amp; chốt baseline</a></li>
+      <li><a href="#s2"><span class="num">02</span>dbt trong 10 phút</a></li>
+      <li><a href="#s3"><span class="num">03</span>Nhiệm vụ 1 — Idempotency</a></li>
+      <li><a href="#s4"><span class="num">04</span>Nhiệm vụ 2 — Dữ liệu về muộn</a></li>
+      <li><a href="#s5"><span class="num">05</span>Nhiệm vụ 3 — Contract &amp; quarantine</a></li>
+      <li><a href="#s6"><span class="num">06</span>Verify tổng thể</a></li>
+      <li><a href="#s7"><span class="num">07</span>Thưởng A — Small-file</a></li>
+      <li><a href="#s8"><span class="num">08</span>Thưởng B — Crash recovery</a></li>
+      <li><a href="#s9"><span class="num">09</span>Viết báo cáo</a></li>
+      <li><a href="#s10"><span class="num">10</span>Nộp bài &amp; tự kiểm</a></li>
+      <li><a href="#s11"><span class="num">11</span>Mini quiz</a></li>
+      <li><a href="#s12"><span class="num">12</span>Khi bị kẹt</a></li>
+    </ol>
+    <div class="prog">
+      <span id="prog-text">0 / 0 bước</span>
+      <div class="prog-bar"><i id="prog-fill"></i></div>
+    </div>
+  </nav>
+
+  <main>
+
+    <!-- ============================================================ 00 -->
+    <section id="s0">
+      <h2><span class="sec-num">00</span>Trước khi bắt đầu</h2>
+
+      <p class="lede">
+        Bạn tiếp nhận bàn giao đường ống dữ liệu của một nền tảng AI hỗ trợ khách hàng.
+        Lab này <strong>không</strong> yêu cầu xây lại hệ thống — nó yêu cầu bạn chẩn đoán,
+        đúng như công việc của một data engineer khi nhận ca trực.
+      </p>
+
+      <h3>Kiến trúc bạn đang tiếp nhận</h3>
+
+      <div class="flow">Postgres tickets (CDC) ─┐
+S3 transcripts (JSON)  ─┼─→  <span style="color:var(--bronze)">BRONZE</span>  ─→  <span style="color:var(--silver)">SILVER</span>  ─┬─→  <span style="color:var(--gold)">gold_doc_chunks</span>     →  RAG index
+Kafka events + feedback ─┘                          ├─→  <span style="color:var(--gold)">gold_training_set</span>   →  Classifier
+                                                    └─→  <span style="color:var(--gold)">gold_feature_daily</span>  →  Routing agent</div>
+
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr><th>Tầng</th><th>Bảng</th><th>Vai trò</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><span class="tier b">Bronze</span></td><td><code>bronze_tickets_cdc</code>, <code>bronze_events</code>, <code>bronze_transcripts</code></td><td>Bản sao trung thực của nguồn, append-only, có <code>_ingested_at</code></td></tr>
+            <tr><td><span class="tier s">Silver</span></td><td><code>silver_tickets</code>, <code>silver_events</code>, <code>quarantine_tickets</code></td><td>Đã dedup và làm sạch — nơi data contract được áp</td></tr>
+            <tr><td><span class="tier g">Gold</span></td><td><code>gold_doc_chunks</code>, <code>gold_training_set</code>, <code>gold_feature_daily</code></td><td>Phục vụ trực tiếp cho ba hệ AI ở hạ nguồn</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="note">
+        <span class="box-label">Về lựa chọn công nghệ</span>
+        <p>Kho dữ liệu là DuckDB, transform bằng dbt. Postgres, S3 và Kafka được thay bằng ba file seed và
+        một commit log ghi trên đĩa. Các khái niệm giữ nguyên — CDC, offset, commit, partition, contract —
+        chỉ hạ tầng được đơn giản hoá, để thời gian dành cho việc <em>chẩn đoán</em> thay vì việc <em>cài đặt</em>.</p>
+      </div>
+
+      <h3>Thang điểm — đọc kỹ trước khi làm</h3>
+
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr><th>Hạng mục</th><th>Đo bằng</th><th class="num">Điểm</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Ba lượt chạy cho checksum giống hệt nhau</td><td><code>make verify</code> — cột ỔN ĐỊNH</td><td class="num">30</td></tr>
+            <tr><td>Số hàng các bảng Gold khớp <code>expected/</code></td><td><code>make verify</code> — cột SỐ HÀNG</td><td class="num">30</td></tr>
+            <tr><td><code>contract</code> bật, <code>dbt test</code> pass, quarantine đúng</td><td><code>make verify</code></td><td class="num">20</td></tr>
+            <tr><td>Báo cáo nêu đúng <strong>nguyên nhân</strong>, không chỉ mô tả cách sửa</td><td>Người chấm đọc</td><td class="num">20</td></tr>
+            <tr><td>Mỗi bài trong <code>EXTRA.md</code></td><td><code>make explain</code> / <code>make crash-test</code></td><td class="num">+5</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="warn-box">
+        <span class="box-label">20 điểm dễ mất nhất</span>
+        <p>Sửa đúng nhưng không giải thích được cơ chế sẽ mất trọn 20 điểm báo cáo. Vừa làm vừa
+        ghi lại số liệu — sau khi sửa xong rồi mới quay lại đo "trước khi sửa" là không còn kịp.</p>
+        <p>Cụ thể: mỗi nhiệm vụ <strong>6 điểm</strong> cho mục Nguyên nhân, cộng <strong>2 điểm</strong>
+        cho con số P99 ở nhiệm vụ 2.</p>
+      </div>
+
+      <h3>Trừ điểm — đọc kỹ, có mức trừ toàn bài</h3>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Vi phạm</th><th class="num">Trừ</th></tr></thead>
+          <tbody>
+            <tr><td>Sửa <code>expected/</code>, <code>tools/verify.py</code>, <code>tools/explain.py</code>, <code>tools/common.py</code> hoặc <code>seed/generate.py</code> để đạt tiêu chí</td><td class="num"><span class="fail">0 điểm toàn bài</span></td></tr>
+            <tr><td>Xoá bớt dữ liệu nguồn cho số hàng khớp</td><td class="num"><span class="fail">0 điểm toàn bài</span></td></tr>
+            <tr><td><code>make verify</code> không chạy được trên repo nộp (thiếu file, lỗi import)</td><td class="num">−10</td></tr>
+            <tr><td>Nộp kèm <code>.venv/</code>, <code>warehouse.duckdb</code>, <code>data/</code> — tức quên <code>make clean</code></td><td class="num">−3</td></tr>
+            <tr><td><code>quarantine_tickets</code> vượt 1.000 hàng (quarantine nhầm nhãn chuỗi hợp lệ)</td><td class="num">−4 <span style="color:var(--ink-faint)">trong mục C</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="note">
+        <span class="box-label">Được sửa gì, không được sửa gì</span>
+        <p><strong>Được:</strong> mọi thứ trong <code>dbt/</code>, <code>ingest/</code>,
+        <code>queries/</code>, <code>tools/compact.py</code>, <code>dags/</code>.</p>
+        <p><strong>Không được:</strong> <code>expected/</code>, <code>seed/generate.py</code>,
+        <code>tools/verify.py</code>, <code>tools/explain.py</code>, <code>tools/common.py</code>.</p>
+      </div>
+
+      <p><code>RUBRIC.md</code> có sẵn một <strong>bảng tự chấm nhanh</strong> ở cuối — điền nó
+      trước khi nộp.</p>
+
+      <h3>Nguyên tắc làm việc suốt lab</h3>
+      <ul class="steps">
+        <li><input type="checkbox" id="c-p1"><label for="c-p1"><strong>Đo trước, sửa sau.</strong> Mỗi nhiệm vụ đều bắt đầu bằng một bước điều tra. Đừng bỏ qua nó — đó chính là phần được chấm 20 điểm.</label></li>
+        <li><input type="checkbox" id="c-p2"><label for="c-p2"><strong>Sửa một nhiệm vụ, chạy <code>make verify</code> một lần.</strong> Đừng sửa cả ba rồi mới chạy — khi hỏng bạn sẽ không biết do đâu.</label></li>
+        <li><input type="checkbox" id="c-p3"><label for="c-p3"><strong>Ghi số liệu vào file nháp ngay.</strong> Mở sẵn một file <code>notes.md</code>, mỗi lần đo được gì thì dán vào.</label></li>
+        <li><input type="checkbox" id="c-p4"><label for="c-p4"><strong>Khung gợi ý nằm ngay trong file cần sửa.</strong> Mỗi file có một khối chú thích <code>KHUNG THỰC HIỆN</code> — đọc nó trước khi gõ dòng nào.</label></li>
+      </ul>
+    </section>
+
+    <!-- ============================================================ 01 -->
+    <section id="s1">
+      <h2><span class="sec-num">01</span>Setup &amp; chốt baseline</h2>
+
+      <p>Bốn lệnh bạn sẽ dùng suốt lab:</p>
+
+      <pre><code><span class="c"># cài venv + thư viện + sinh 14 ngày dữ liệu — chỉ chạy MỘT lần</span>
+make setup
+
+<span class="c"># chạy đường ống một lượt (14 ngày vận hành)</span>
+make pipeline
+
+<span class="c"># ⭐ xoá kho, chạy 3 lượt, in bảng chấm — dùng lệnh này liên tục</span>
+make verify
+
+<span class="c"># như verify nhưng chỉ 1 lượt: nhanh, KHÔNG kiểm tra tính ổn định</span>
+make quick</code></pre>
+
+      <div class="warn-box">
+        <span class="box-label">Bẫy nhỏ nhưng tốn thời gian</span>
+        <p><code>make quick</code> chỉ chạy một lượt nên không phát hiện được lỗi mất ổn định.
+        Nó hợp để thử nhanh khi đang sửa dở, nhưng trước khi kết luận "xong nhiệm vụ" thì
+        <strong>bắt buộc</strong> chạy <code>make verify</code> đủ ba lượt.</p>
+      </div>
+
+      <h3>Hàm truy vấn nhanh</h3>
+      <p>Dán vào terminal một lần, dùng được cả buổi. Đây là công cụ điều tra chính:</p>
+      <pre><code>q() { .venv/bin/python -c <span class="s">"
+import duckdb, sys
+duckdb.connect('warehouse.duckdb').sql(sys.argv[1]).show(max_rows=40)
+"</span> <span class="s">"$1"</span>; }
+
+<span class="c"># dùng thế này</span>
+q <span class="s">"select count(*) from gold_training_set"</span></code></pre>
+
+      <h3>Baseline bạn phải thấy</h3>
+      <p>Chạy <code>make verify</code> lần đầu. Ba dòng ✗ tương ứng ba nhiệm vụ:</p>
+
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr><th>Bảng</th><th>Ổn định</th><th class="num">Số hàng</th><th class="num">Kỳ vọng</th><th>Ghi chú</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>gold_training_set</code></td><td><span class="fail">✗ FAIL</span></td><td class="num">38,750</td><td class="num">12,480</td><td>thừa 26,270 → <strong>Nhiệm vụ 1</strong></td></tr>
+            <tr><td><code>gold_feature_daily</code></td><td><span class="pass">✓ ok</span></td><td class="num">8,645</td><td class="num">9,100</td><td>thiếu 455 → <strong>Nhiệm vụ 2</strong></td></tr>
+            <tr><td><code>gold_doc_chunks</code></td><td><span class="pass">✓ ok</span></td><td class="num">31,200</td><td class="num">31,200</td><td>nhóm đối chứng, đừng đụng vào</td></tr>
+            <tr><td><code>quarantine_tickets</code></td><td><span class="pass">✓ ok</span></td><td class="num">0</td><td class="num">312</td><td>thiếu 312 → <strong>Nhiệm vụ 3</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="key">
+        <span class="box-label">Ý quan trọng nhất của bảng này</span>
+        <p>Hai cột đầu đo hai đại lượng <em>khác nhau</em>. <strong>ỔN ĐỊNH</strong> = chạy lại có cho cùng
+        kết quả không. <strong>SỐ HÀNG</strong> = kết quả đó có đúng không. Một bảng hoàn toàn có thể
+        <em>ổn định nhưng vẫn sai</em> — xem <code>gold_feature_daily</code>: nó cho ra sai lệch giống hệt
+        nhau ở cả ba lượt chạy.</p>
+      </div>
+
+      <ul class="steps">
+        <li><input type="checkbox" id="c-s1"><label for="c-s1">Chạy <code>make setup</code> (nếu chưa)</label></li>
+        <li><input type="checkbox" id="c-s2"><label for="c-s2">Chạy <code>make verify</code> và <strong>lưu lại nguyên output</strong>: <code>make verify 2&gt;&amp;1 | tee verify_before.txt</code></label></li>
+        <li><input type="checkbox" id="c-s3"><label for="c-s3">Dán hàm <code>q()</code> vào terminal</label></li>
+        <li><input type="checkbox" id="c-s4"><label for="c-s4">Xác nhận thấy đúng <code>1/4 tiêu chí đạt</code></label></li>
+      </ul>
+
+      <div class="note">
+        <span class="box-label">Nếu verify báo lỗi ở cuối</span>
+        <p>Nếu bạn thấy <code>IOException: No files found ... data/gold_events/*.parquet</code>, đó là vì
+        phần đo dashboard của bài thưởng chưa có dữ liệu. Chạy <code>make seed-extra</code> (~30 giây) là hết.
+        Ba nhiệm vụ chính không bị ảnh hưởng.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================ 02 -->
+    <section id="s2">
+      <h2><span class="sec-num">02</span>dbt trong 10 phút</h2>
+      <p class="lede">Lab không yêu cầu kinh nghiệm dbt. Bốn khái niệm dưới đây là đủ để làm hết ba nhiệm vụ.</p>
+
+      <h3>1 · Model và <code>ref()</code></h3>
+      <p>Một file <code>.sql</code> = một bảng. Bên trong, <code>{{ ref('silver_tickets') }}</code> thay cho tên bảng —
+      dbt đọc các <code>ref()</code> để tự dựng đồ thị phụ thuộc và biết phải chạy model nào trước.</p>
+
+      <h3>2 · Materialization — bảng được tạo ra thế nào</h3>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Kiểu</th><th>Hành vi</th><th>Hệ quả</th></tr></thead>
+          <tbody>
+            <tr><td><code>table</code></td><td>Xoá và dựng lại toàn bộ mỗi lần chạy</td><td>Luôn ổn định, nhưng tốn công khi dữ liệu lớn</td></tr>
+            <tr><td><code>incremental</code></td><td>Chỉ xử lý phần "mới", ghi thêm vào bảng đã có</td><td>Nhanh — và là nơi mọi lỗi idempotency sinh ra</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>3 · <code>unique_key</code> và <code>incremental_strategy</code></h3>
+      <p>Đây là trọng tâm của Nhiệm vụ 1 và 2. Ba tham số trong <code>config()</code> quyết định câu lệnh SQL mà dbt sinh ra:</p>
+      <pre><code>{{ config(
+    materialized         = <span class="s">'incremental'</span>,
+    unique_key           = <span class="s">'&lt;cột định danh bản ghi&gt;'</span>,
+    incremental_strategy = <span class="s">'&lt;append | delete+insert | merge&gt;'</span>
+) }}</code></pre>
+      <ul>
+        <li><strong>Không khai <code>unique_key</code></strong> → dbt không có gì để so khớp → sinh <code>INSERT INTO</code> → chạy lại là <em>ghi thêm dòng</em>.</li>
+        <li><strong><code>merge</code> + <code>unique_key</code></strong> → khớp được thì <code>UPDATE</code>, chưa có thì <code>INSERT</code> → chạy lại là <em>ghi đè</em>.</li>
+        <li><code>unique_key</code> nhận cả danh sách nhiều cột: <code>['event_date', 'customer_id']</code>.</li>
+      </ul>
+
+      <div class="key">
+        <span class="box-label">Khái niệm bản lề: grain</span>
+        <p><strong>Grain</strong> là câu trả lời cho "một hàng của bảng này đại diện cho cái gì?".
+        Grain quyết định <code>unique_key</code>. Nếu grain là <em>một ticket</em> thì khoá là <code>ticket_id</code>;
+        nếu grain là <em>một cặp ngày–khách hàng</em> thì khoá là cả hai cột. Mỗi file model trong lab
+        đã ghi sẵn grain của nó ở dòng chú thích đầu tiên — đọc dòng đó.</p>
+      </div>
+
+      <h3>4 · Debug — xem SQL thật mà dbt sinh ra</h3>
+      <p>Khi không hiểu vì sao kết quả sai, mở file SQL đã biên dịch. Đây là câu lệnh thật chạy trên DuckDB:</p>
+      <pre><code>dbt/target/run/lab17/models/gold/gold_training_set.sql
+dbt/target/compiled/lab17/models/gold/gold_feature_daily.sql</code></pre>
+      <p>Trong <code>target/run/</code> bạn sẽ thấy rõ dbt đang sinh <code>INSERT INTO</code> hay <code>MERGE</code> —
+      bằng chứng trực tiếp cho Nhiệm vụ 1.</p>
+
+      <h3>Bonus: macro</h3>
+      <p>Macro là một đoạn SQL đặt tên, dùng lại được ở nhiều model. Gọi bằng
+      <code>{{ normalize_priority('priority_raw') }}</code> và dbt chèn nội dung macro vào đúng chỗ đó.
+      Nhiệm vụ 3 dùng một macro ở <em>hai</em> model, nhờ vậy hai model không thể lệch định nghĩa nhau.</p>
+    </section>
+
+    <!-- ============================================================ 03 -->
+    <section id="s3">
+      <h2><span class="sec-num">03</span>Nhiệm vụ 1 — Kích thước bảng training tăng sau mỗi lần chạy</h2>
+      <p class="lede">30 phút · Mục tiêu: idempotency — chạy lại N lần cho cùng một kết quả.</p>
+
+      <div class="ticket">
+        <span class="tno">Phiếu sự cố #1041</span>
+        <p>"Đêm qua job lỗi mạng, mình vào Airflow bấm Clear Task cho chạy lại. Sáng nay
+        <code>gold_training_set</code> nhiều hơn hẳn. Chạy lại lần nữa lại nhiều thêm.
+        Không thấy báo lỗi gì cả."</p>
+      </div>
+
+      <h4>Bước 1 · Điều tra</h4>
+      <p>Chạy từng lệnh, ghi kết quả vào file nháp:</p>
+      <pre><code><span class="c"># 1. Xác nhận hiện tượng: chạy hai lượt, đếm sau mỗi lượt</span>
+make pipeline && q <span class="s">"select count(*) from gold_training_set"</span>
+make pipeline && q <span class="s">"select count(*) from gold_training_set"</span>
+
+<span class="c"># 2. Bảng đang lặp hay đang thừa ticket lạ?</span>
+q <span class="s">"select count(*) as total, count(distinct ticket_id) as tickets
+   from gold_training_set"</span>
+
+<span class="c"># 3. Nguồn CDC có những loại thao tác nào?</span>
+q <span class="s">"select op, count(*) from bronze_tickets_cdc group by 1"</span>
+
+<span class="c"># 4. Một ticket bị cập nhật xuất hiện mấy lần, ở những ngày nào?</span>
+q <span class="s">"select ticket_id, count(*) c from gold_training_set
+   group by 1 having c > 1 limit 5"</span></code></pre>
+
+      <h4>Bước 2 · Câu hỏi cần tự trả lời</h4>
+      <ol>
+        <li>Grain của <code>gold_training_set</code> là entity hay sự kiện? Khoá tự nhiên là gì?
+          <em>(Gợi ý: dòng chú thích đầu file đã ghi sẵn.)</em></li>
+        <li>Khi <code>config()</code> không có <code>unique_key</code>, dbt sinh ra câu lệnh ghi nào?
+          Mở <code>dbt/target/run/lab17/models/gold/gold_training_set.sql</code> để nhìn tận mắt.</li>
+        <li>Nguồn có bản ghi <code>op='u'</code>. Một ticket tạo ngày D1, sửa ngày D2 sẽ đi qua mệnh đề
+          <code>WHERE</code> theo <code>run_date</code> mấy lần?
+          <em>(Lưu ý: một lệnh <code>make pipeline</code> chạy lần lượt cả 14 ngày vận hành — xem
+          <code>tools/run_pipeline.py</code>. Nên "hai lần" ở đây xảy ra ngay trong <strong>cùng một</strong>
+          lệnh <code>make pipeline</code>, ở hai <code>run_date</code> khác nhau.)</em></li>
+        <li>Trong ba chiến lược <code>append</code> / <code>delete+insert</code> theo partition ngày /
+          <code>merge</code> theo khoá, cái nào phù hợp với dữ liệu như vậy? Vì sao hai cái kia không đủ?</li>
+        <li>Mở <code>dags/ai_training_pipeline.py</code> — hai tham số nào khiến thao tác Clear Task trở nên rủi ro?</li>
+      </ol>
+
+      <div class="warn-box">
+        <span class="box-label">Đừng sửa nhầm chỗ</span>
+        <p>Mệnh đề <code>where _ingested_at &gt;= ... run_date ...</code> trong file <strong>không phải lỗi</strong>.
+        Nó tồn tại để backfill một ngày không phải quét lại toàn bộ lịch sử. Giữ nguyên nó — xoá đi là
+        bạn sửa triệu chứng chứ không sửa nguyên nhân, và sẽ mất điểm phần báo cáo.</p>
+      </div>
+
+      <h4>Bước 3 · Sửa — hai file</h4>
+      <p><strong>File 1 — <code>dbt/models/gold/gold_training_set.sql</code>:</strong> bổ sung hai tham số còn thiếu
+      vào khối <code>config()</code>. Giữ nguyên <code>materialized</code> và <code>on_schema_change</code>.</p>
+      <p><strong>File 2 — <code>dags/ai_training_pipeline.py</code>:</strong> đặt lại hai tham số ở khối <code>TODO</code>.
+      Bạn không cần cài Airflow — <code>make verify</code> đọc file này bằng AST, không import.</p>
+
+      <div class="key">
+        <span class="box-label">⚠️ Đừng nhầm hai file này là ngang hàng</span>
+        <p>Hai tham số DAG chỉ <strong>giảm tần suất kích hoạt</strong> lỗi — chúng <em>không phải</em>
+        root cause. Root cause nằm ở <code>config()</code> của model. Sửa DAG mà không sửa model thì
+        <code>make verify</code> vẫn đỏ; sửa model mà không sửa DAG thì verify xanh nhưng mất điểm dòng
+        kiểm tra DAG.</p>
+        <p>Điều này quan trọng khi viết báo cáo: nếu bạn nêu "tôi đặt <code>catchup=False</code>" làm
+        nguyên nhân, đó là mô tả một biện pháp giảm thiểu, không phải cơ chế gây lỗi.</p>
+      </div>
+
+      <details>
+        <summary>Đối chiếu đáp án — chỉ mở sau khi đã tự làm</summary>
+        <div class="details-body">
+          <p class="filename">dbt/models/gold/gold_training_set.sql</p>
+          <pre><code>{{ config(
+    materialized         = <span class="s">'incremental'</span>,
+    unique_key           = <span class="s">'ticket_id'</span>,
+    incremental_strategy = <span class="s">'merge'</span>,
+    on_schema_change     = <span class="s">'fail'</span>
+) }}</code></pre>
+          <p class="filename">dags/ai_training_pipeline.py</p>
+          <pre><code>catchup=False,
+max_active_runs=1,</code></pre>
+          <p><strong>Vì sao <code>merge</code> chứ không phải <code>delete+insert</code> theo ngày:</strong>
+          cùng một ticket nằm rải ở nhiều partition <code>_ingested_at</code> khác nhau (tạo ngày D1,
+          sửa ngày D2). Xoá partition của một ngày rồi ghi lại chỉ dọn được bản sao nằm trong ngày đó,
+          các bản sao ở ngày khác vẫn còn nguyên. Phải khớp theo <em>khoá của entity</em>, không phải theo <em>ngày</em>.</p>
+          <p><strong>Vì sao hai tham số DAG:</strong> <code>catchup=False</code> ngăn Airflow tự xếp hàng
+          chạy bù toàn bộ lịch sử kể từ <code>start_date</code> mỗi khi DAG được bật lại;
+          <code>max_active_runs=1</code> chặn hai run ghi đồng thời vào cùng một bảng đích — đúng
+          tình huống mà thao tác Clear Task tạo ra.</p>
+        </div>
+      </details>
+
+      <h4>Bước 4 · Kiểm chứng</h4>
+      <ul class="steps">
+        <li><input type="checkbox" id="c-n1a"><label for="c-n1a"><code>make verify</code> báo <code>gold_training_set</code> ỔN ĐỊNH <span class="pass">✓</span></label></li>
+        <li><input type="checkbox" id="c-n1b"><label for="c-n1b">Số hàng bằng đúng <code>expected/gold_training_set.count</code></label></li>
+        <li><input type="checkbox" id="c-n1c"><label for="c-n1c">Dòng "gold_training_set: 1 hàng / 1 ticket" hết ✗</label></li>
+        <li><input type="checkbox" id="c-n1d"><label for="c-n1d">Dòng "DAG: catchup / max_active_runs" chuyển <span class="pass">✓</span></label></li>
+        <li><input type="checkbox" id="c-n1e"><label for="c-n1e">Chạy thêm <code>make pipeline</code> lượt thứ 4, thứ 5 — số hàng vẫn không đổi</label></li>
+        <li><input type="checkbox" id="c-n1f"><label for="c-n1f">Ghi vào nháp: số hàng trước / sau, và ba mã checksum</label></li>
+      </ul>
+    </section>
+
+    <!-- ============================================================ 04 -->
+    <section id="s4">
+      <h2><span class="sec-num">04</span>Nhiệm vụ 2 — Bảng đặc trưng thiếu hàng ở các ngày quá khứ</h2>
+      <p class="lede">35 phút · Mục tiêu: xử lý dữ liệu về muộn bằng lookback window dựa trên P99.</p>
+
+      <div class="ticket">
+        <span class="tno">Phiếu sự cố #1043</span>
+        <p>"<code>gold_feature_daily</code> thiếu khoảng 5% so với đối chiếu thủ công. Kỳ lạ là chỉ thiếu
+        ở những ngày đã chạy xong từ lâu, ngày mới thì đủ."</p>
+      </div>
+
+      <h4>Bước 1 · Điều tra — bắt buộc đo P99</h4>
+      <p>Con số P99 là <strong>yêu cầu bắt buộc</strong> của báo cáo. Đo độ trễ giữa lúc sự kiện <em>xảy ra</em>
+      và lúc nó <em>tới kho</em>:</p>
+      <pre><code>q <span class="s">"select
+     quantile_cont(date_diff('second', event_time, _ingested_at)/86400.0, 0.99) as p99_days,
+     quantile_cont(date_diff('second', event_time, _ingested_at)/86400.0, 0.95) as p95_days,
+     max(date_diff('second', event_time, _ingested_at)/86400.0)                 as max_days,
+     avg(case when date_diff('day', event_time, _ingested_at) >= 1
+              then 1.0 else 0 end)                                             as pct_late
+   from bronze_events"</span></code></pre>
+
+      <p>Xác định chính xác tập hàng bị thiếu — kỳ vọng là 14 ngày × 650 khách hàng = 9.100 cặp:</p>
+      <pre><code>q <span class="s">"select s.event_date, count(distinct s.customer_id) as so_cap_thieu
+   from silver_events s
+   left join gold_feature_daily g
+     on g.event_date = s.event_date and g.customer_id = s.customer_id
+   where g.customer_id is null
+   group by 1 order by 1"</span></code></pre>
+      <p>Các cặp bị thiếu tập trung ở ngày mới hay ngày cũ? Kiểm chứng bằng thời điểm dữ liệu tới kho:</p>
+      <pre><code>q <span class="s">"select s.event_date,
+          min(s.ingested_date) as toi_som_nhat,
+          max(s.ingested_date) as toi_muon_nhat,
+          count(*)             as so_event
+   from silver_events s
+   left join gold_feature_daily g
+     on g.event_date = s.event_date and g.customer_id = s.customer_id
+   where g.customer_id is null
+   group by 1 order by 1 limit 5"</span></code></pre>
+
+      <p>Rồi xem điều kiện lọc hiện tại trong khối <code>is_incremental()</code> của
+      <code>dbt/models/gold/gold_feature_daily.sql</code>. Mốc so sánh là đại lượng nào?</p>
+
+      <h4>Bước 2 · Câu hỏi cần tự trả lời</h4>
+      <ol>
+        <li>P99 bằng bao nhiêu ngày? Bao nhiêu phần trăm bản ghi tới kho muộn hơn một ngày?</li>
+        <li>Một bản ghi có <code>event_date = 08-12</code> nhưng <code>_ingested_at = 08-15</code>:
+          hôm 08-15, <code>max(event_date)</code> trong bảng đích đang là bao nhiêu? Bản ghi đó có
+          thoả điều kiện lọc hiện tại không? <strong>Ngày hôm sau thì sao?</strong></li>
+        <li>Đổi <code>&gt;</code> thành <code>&gt;=</code> đã đủ chưa? Toán tử đó nới window thêm
+          đúng mấy ngày?</li>
+        <li>Window tính lại nên lùi bao nhiêu ngày? Căn cứ vào P99 hay vào <code>max</code>?
+          Mỗi ngày lùi thêm phải trả giá gì — ở lượt chạy này, và ở <em>mọi</em> lượt chạy sau này?</li>
+        <li>Khi window mở rộng, cùng một <code>(event_date, customer_id)</code> sẽ được tính lại nhiều lần.
+          Cần thêm gì vào <code>config()</code> để lần tính sau <strong>thay thế</strong> lần trước
+          thay vì cộng dồn? Grain này có mấy cột khoá?</li>
+      </ol>
+
+      <div class="key">
+        <span class="box-label">Điểm cốt lõi của nhiệm vụ này</span>
+        <p>Bảng đang <em>ổn định nhưng sai</em>. Mốc so sánh là <code>max(event_date)</code> của chính bảng đích —
+        một đại lượng chỉ tăng theo thời gian. Bản ghi tới muộn không thoả điều kiện ở ngày nó tới,
+        và vì mốc kia chỉ tiếp tục tăng, nó <strong>không bao giờ</strong> có cơ hội được xử lý ở bất kỳ
+        lượt chạy nào sau đó. Dữ liệu mất vĩnh viễn, không có cảnh báo nào bắt được.</p>
+      </div>
+
+      <h4>Bước 3 · Sửa — một file, hai thay đổi phải đi cùng nhau</h4>
+      <p>Trong <code>dbt/models/gold/gold_feature_daily.sql</code>:</p>
+      <ol>
+        <li>Nới điều kiện trong khối <code>is_incremental()</code> để tính lại một cửa sổ lùi về quá khứ.</li>
+        <li>Thêm khoá composite + chiến lược <code>merge</code> vào <code>config()</code>.</li>
+      </ol>
+
+      <div class="warn-box">
+        <span class="box-label">Bẫy lớn nhất của cả lab</span>
+        <p>Nếu bạn chỉ làm ý (1) mà quên ý (2): bảng sẽ đúng số hàng ở lượt chạy đầu tiên, rồi
+        <strong>cộng dồn và mất tính ổn định</strong> ngay từ lượt thứ hai. Đây chính là lý do
+        <code>make verify</code> in tách riêng hai cột "ỔN ĐỊNH" và "SỐ HÀNG" — để bạn nhìn thấy
+        hai vấn đề này là hai chuyện khác nhau.</p>
+      </div>
+
+      <details>
+        <summary>Đối chiếu đáp án — chỉ mở sau khi đã tự làm</summary>
+        <div class="details-body">
+          <p class="filename">dbt/models/gold/gold_feature_daily.sql</p>
+          <pre><code>{{ config(
+    materialized         = <span class="s">'incremental'</span>,
+    unique_key           = [<span class="s">'event_date'</span>, <span class="s">'customer_id'</span>],
+    incremental_strategy = <span class="s">'merge'</span>,
+    on_schema_change     = <span class="s">'fail'</span>
+) }}
+
+<span class="c">-- ... phần select giữ nguyên ...</span>
+
+{% if is_incremental() %}
+<span class="k">where</span> event_date &gt;= (<span class="k">select</span> max(event_date) - <span class="k">interval</span> 3 <span class="k">day</span> <span class="k">from</span> {{ this }})
+{% endif %}</code></pre>
+          <p><strong>Về con số 3:</strong> nó phải đến từ P99 bạn <em>đo được</em>, làm tròn lên thành số
+          nguyên ngày — không phải một con số chọn bừa. Báo cáo phải nêu rõ giá trị P99 và lý do chọn.</p>
+          <p><strong>Vì sao P99 chứ không phải <code>max</code>:</strong> <code>max</code> là một quan sát
+          đơn lẻ, không có tính thống kê — chỉ cần một bản ghi lạc trễ 30 ngày là cửa sổ phải mở 30 ngày,
+          và cái giá đó phải trả ở mọi lượt chạy về sau, mãi mãi. P99 chấp nhận bỏ sót 1% cực đoan để đổi
+          lấy chi phí ổn định và dự đoán được. Chiều ngược lại cũng có giá của nó: cửa sổ quá hẹp thì
+          dữ liệu mất im lặng — đúng như sự cố đang xảy ra.</p>
+        </div>
+      </details>
+
+      <h4>Bước 4 · Kiểm chứng</h4>
+      <ul class="steps">
+        <li><input type="checkbox" id="c-n2a"><label for="c-n2a">Số hàng khớp <code>expected/gold_feature_daily.count</code></label></li>
+        <li><input type="checkbox" id="c-n2b"><label for="c-n2b">Vẫn ỔN ĐỊNH <span class="pass">✓</span> — checksum ba lượt giống hệt nhau</label></li>
+        <li><input type="checkbox" id="c-n2c"><label for="c-n2c"><strong>Nhiệm vụ 1 không bị hỏng</strong> — kiểm lại cả hai dòng cùng lúc</label></li>
+        <li><input type="checkbox" id="c-n2d"><label for="c-n2d">Đã ghi vào nháp: giá trị P99, lookback đã chọn, và lý do</label></li>
+      </ul>
+    </section>
+
+    <!-- ============================================================ 05 -->
+    <section id="s5">
+      <h2><span class="sec-num">05</span>Nhiệm vụ 3 — Kiểu dữ liệu cột <code>priority</code> thay đổi giữa chu kỳ</h2>
+      <p class="lede">30 phút · Mục tiêu: data contract, schema evolution, và định tuyến bản ghi lỗi.</p>
+
+      <div class="ticket">
+        <span class="tno">Phiếu sự cố #1047</span>
+        <p>"Team backend đổi kiểu cột <code>priority</code> từ số sang chuỗi hôm 08-10, có thông báo trên Slack.
+        Pipeline không hề dừng. Nhưng model phân loại từ hôm đó dự đoán kém hẳn."</p>
+      </div>
+
+      <h4>Bước 1 · Điều tra</h4>
+      <pre><code><span class="c"># Nguồn đang gửi những giá trị gì?</span>
+q <span class="s">"select priority_raw, count(*) n from bronze_tickets_cdc
+   group by 1 order by 2 desc"</span>
+
+<span class="c"># Sau khi qua Silver thì còn lại gì?</span>
+q <span class="s">"select priority, count(*) n from silver_tickets group by 1 order by 1"</span>
+
+<span class="c"># Sự cố bắt đầu từ ngày nào?</span>
+q <span class="s">"select event_time::date d, priority_raw, count(*)
+   from bronze_tickets_cdc group by 1,2 order by 1,2"</span></code></pre>
+      <p>Rồi mở <code>dbt/models/silver/schema.yml</code> — <code>contract</code> đang ở trạng thái nào?</p>
+
+      <h4>Bước 2 · Phân loại — đây là toàn bộ nhiệm vụ</h4>
+      <p>Bạn sẽ thấy <strong>ba</strong> nhóm giá trị, và ba nhóm này <strong>không</strong> xử lý giống nhau:</p>
+
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Nhóm</th><th>Giá trị</th><th>Bản chất</th><th>Xử lý</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>1</strong></td>
+              <td><code>'1' '2' '3' '4'</code></td>
+              <td>Đúng contract cũ</td>
+              <td><span class="pass">Giữ nguyên</span></td>
+            </tr>
+            <tr>
+              <td><strong>2</strong></td>
+              <td><code>'urgent' 'high' 'medium' 'low'</code></td>
+              <td><strong>Schema evolution</strong> — ý nghĩa không đổi, chỉ đổi cách biểu diễn</td>
+              <td><span class="pass">Quy về số</span> theo tài liệu API: urgent=1, high=2, medium=3, low=4</td>
+            </tr>
+            <tr>
+              <td><strong>3</strong></td>
+              <td><code>'P1' 'unknown' '0' '5' '-1' '' NULL</code></td>
+              <td>Dữ liệu hỏng thật</td>
+              <td><span class="fail">Trả về NULL</span> → quarantine</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="warn-box">
+        <span class="box-label">Hai lỗi hay gặp nhất</span>
+        <p><strong>(a) Xử lý nhóm 2 như nhóm 3.</strong> Nếu để nhãn chữ rơi vào NULL thì quarantine sẽ có
+        hàng nghìn hàng thay vì vài trăm — và bạn vừa vứt đi hơn một nửa dữ liệu tốt chỉ vì nguồn đổi format.</p>
+        <p><strong>(b) Tin vào <code>try_cast</code>.</strong> Biểu thức hiện tại sai theo <em>hai hướng ngược nhau
+        cùng lúc</em>: nó biến nhãn chữ hợp lệ thành NULL, đồng thời lại chấp nhận <code>'0'</code>,
+        <code>'5'</code>, <code>'-1'</code> vì chúng đúng là số — dù contract nói chỉ 1..4.</p>
+      </div>
+
+      <h4>Bước 3 · Sửa — bốn file, làm đúng thứ tự này</h4>
+
+      <p><strong>① <code>dbt/macros/normalize_priority.sql</code></strong> — thay <code>try_cast</code> bằng một khối
+      <code>CASE</code> phủ đủ ba nhóm. Macro này được dùng ở <em>cả hai</em> model bên dưới, nên sửa một chỗ
+      là cả hai cùng đổi và không thể lệch nhau.</p>
+
+      <p><strong>② <code>dbt/models/silver/silver_tickets.sql</code></strong> — loại bỏ những bản ghi không chuẩn hoá được.</p>
+
+      <div class="key">
+        <span class="box-label">⚠️ Thứ tự quyết định số hàng của bảng</span>
+        <p>Hiện tại file xếp hạng (<code>row_number()</code>) trước, rồi mới chọn. Nếu bạn chỉ thêm điều kiện
+        lọc vào cuối, ticket nào có bản ghi <em>mới nhất</em> bị hỏng sẽ <strong>biến mất hoàn toàn</strong>
+        khỏi Silver — số ticket tụt từ 12.480 xuống 12.168, và <code>gold_training_set</code> hụt theo.</p>
+        <p>Đúng phải là: <strong>lọc bỏ bản ghi hỏng trước → sau đó mới xếp hạng</strong>. Bạn loại
+        <em>bản ghi</em> hỏng, không loại cả <em>ticket</em> — ticket đó vẫn còn trạng thái hợp lệ từ lần
+        cập nhật trước. <code>make verify</code> có một dòng riêng để bắt đúng lỗi này.</p>
+      </div>
+
+      <p><strong>③ <code>dbt/models/silver/quarantine_tickets.sql</code></strong> — model đã nối sẵn, bạn chỉ điền
+      mệnh đề <code>WHERE</code> thay cho <code>false</code>. Dùng <em>đúng</em> macro mà <code>silver_tickets</code> dùng.
+      Lưu ý grain: 1 hàng / 1 <strong>bản ghi CDC</strong> bị loại, không phải 1 hàng / 1 ticket.</p>
+
+      <p><strong>④ <code>dbt/models/silver/schema.yml</code></strong> — bật <code>contract</code> và bỏ comment khối
+      <code>tests</code> ở cột <code>priority</code>.</p>
+
+      <div class="note">
+        <span class="box-label">Vì sao cần cả contract lẫn test</span>
+        <p><code>contract</code> ràng buộc <strong>kiểu</strong> dữ liệu — bật lên thì dbt kiểm tra từng cột đúng
+        <code>data_type</code> đã khai, sai là dừng model. Nhưng nó <em>không</em> ràng buộc
+        <strong>miền giá trị</strong>: <code>priority = 99</code> vẫn đi qua vì 99 đúng là integer.
+        Miền giá trị là việc của <code>accepted_values</code>. Cần cả hai.</p>
+      </div>
+
+      <details>
+        <summary>Đối chiếu đáp án — chỉ mở sau khi đã tự làm</summary>
+        <div class="details-body">
+          <p class="filename">dbt/macros/normalize_priority.sql</p>
+          <pre><code>{% macro normalize_priority(col) %}
+    <span class="k">case</span> lower(trim(<span class="k">cast</span>({{ col }} <span class="k">as</span> varchar)))
+        <span class="c">-- nhóm 1</span>
+        <span class="k">when</span> <span class="s">'1'</span> <span class="k">then</span> 1   <span class="k">when</span> <span class="s">'2'</span> <span class="k">then</span> 2
+        <span class="k">when</span> <span class="s">'3'</span> <span class="k">then</span> 3   <span class="k">when</span> <span class="s">'4'</span> <span class="k">then</span> 4
+        <span class="c">-- nhóm 2: schema evolution</span>
+        <span class="k">when</span> <span class="s">'urgent'</span> <span class="k">then</span> 1
+        <span class="k">when</span> <span class="s">'high'</span>   <span class="k">then</span> 2
+        <span class="k">when</span> <span class="s">'medium'</span> <span class="k">then</span> 3
+        <span class="k">when</span> <span class="s">'low'</span>    <span class="k">then</span> 4
+        <span class="c">-- nhóm 3: NULL là tín hiệu "không hợp lệ"</span>
+        <span class="k">else</span> <span class="k">null</span>
+    <span class="k">end</span>
+{% endmacro %}</code></pre>
+
+          <p class="filename">dbt/models/silver/silver_tickets.sql</p>
+          <pre><code><span class="k">with</span> normalized <span class="k">as</span> (
+    <span class="k">select</span> *, {{ normalize_priority('priority_raw') }} <span class="k">as</span> priority_clean
+    <span class="k">from</span> {{ source('bronze', 'bronze_tickets_cdc') }}
+),
+
+<span class="c">-- LỌC TRƯỚC, xếp hạng sau</span>
+valid_records <span class="k">as</span> (
+    <span class="k">select</span> * <span class="k">from</span> normalized <span class="k">where</span> priority_clean <span class="k">is not null</span>
+),
+
+ranked <span class="k">as</span> (
+    <span class="k">select</span> *,
+           row_number() <span class="k">over</span> (
+               <span class="k">partition by</span> ticket_id
+               <span class="k">order by</span> event_time <span class="k">desc</span>, cdc_seq <span class="k">desc</span>
+           ) <span class="k">as</span> _rn
+    <span class="k">from</span> valid_records
+),
+
+latest <span class="k">as</span> (<span class="k">select</span> * <span class="k">from</span> ranked <span class="k">where</span> _rn = 1)
+
+<span class="c">-- phần select cuối và `where op &lt;&gt; 'd'` giữ nguyên</span></code></pre>
+
+          <p class="filename">dbt/models/silver/quarantine_tickets.sql</p>
+          <pre><code><span class="k">where</span> {{ normalize_priority('priority_raw') }} <span class="k">is null</span></code></pre>
+
+          <p class="filename">dbt/models/silver/schema.yml</p>
+          <pre><code>    config:
+      contract:
+        enforced: <span class="k">true</span>
+
+    <span class="c"># ... ở cột priority:</span>
+      - name: priority
+        data_type: integer
+        tests:
+          - not_null
+          - accepted_values:
+              values: [1, 2, 3, 4]
+              quote: <span class="k">false</span></code></pre>
+
+          <p><strong>Tuỳ chọn cộng điểm báo cáo:</strong> mở rộng macro <code>priority_reject_reason</code>
+          để phân biệt các loại lỗi (NULL / rỗng / là số nhưng ngoài khoảng / là chuỗi lạ). Người trực
+          đọc bảng quarantine là hiểu ngay phải làm gì.</p>
+        </div>
+      </details>
+
+      <h4>Bước 4 · Kiểm chứng</h4>
+      <ul class="steps">
+        <li><input type="checkbox" id="c-n3a"><label for="c-n3a"><code>contract</code> được bật, <code>make dbt-test</code> pass (số test sẽ tăng)</label></li>
+        <li><input type="checkbox" id="c-n3b"><label for="c-n3b"><code>quarantine_tickets</code> khớp <code>expected/quarantine_tickets.count</code></label></li>
+        <li><input type="checkbox" id="c-n3c"><label for="c-n3c"><code>silver_tickets</code> vẫn giữ <strong>đủ</strong> số ticket — dòng riêng trong verify</label></li>
+        <li><input type="checkbox" id="c-n3d"><label for="c-n3d"><code>silver_tickets.priority</code> không còn NULL và luôn thuộc 1..4</label></li>
+        <li><input type="checkbox" id="c-n3e"><label for="c-n3e">Pipeline <strong>không</strong> dừng khi gặp bản ghi lỗi — nó được tách ra và xử lý tiếp</label></li>
+      </ul>
+
+      <h4>Câu hỏi thiết kế — sẽ hỏi trong báo cáo</h4>
+      <p>Dữ liệu sai kiểu nên chặn ở tầng <strong>Bronze</strong> hay <strong>Silver</strong>? Và vì sao
+      <em>không</em> để pipeline dừng khi gặp một bản ghi rác? Hãy tự viết câu trả lời trước khi đọc gợi ý:</p>
+      <details>
+        <summary>Gợi ý hướng suy nghĩ</summary>
+        <div class="details-body">
+          <p>Nghĩ về <em>vai trò</em> của từng tầng: Bronze tồn tại để làm gì, và nếu bạn chặn ở đó thì
+          mất khả năng gì khi quy tắc chuẩn hoá thay đổi vào tháng sau?</p>
+          <p>Về việc dừng pipeline: so sánh quy mô. Vài trăm bản ghi hỏng so với hơn 130.000 event và
+          31.200 chunk hoàn toàn bình thường. Dừng cả DAG biến một sự cố <em>chất lượng cục bộ</em> thành
+          một sự cố <em>ngừng dịch vụ toàn hệ thống</em>. Đây là mô hình dead-letter queue.</p>
+          <p>Và câu hỏi sâu hơn: trạng thái nào tệ hơn — pipeline dừng và có người xử lý ngay, hay
+          pipeline chạy êm trong khi âm thầm vứt đi một nửa dữ liệu tốt?</p>
+        </div>
+      </details>
+    </section>
+
+    <!-- ============================================================ 06 -->
+    <section id="s6">
+      <h2><span class="sec-num">06</span>Verify tổng thể</h2>
+
+      <p>Sau khi xong cả ba nhiệm vụ, chạy lại từ trạng thái sạch để chắc chắn không có gì phụ thuộc
+      vào kho cũ:</p>
+      <pre><code>make clean
+make pipeline
+make verify 2&gt;&amp;1 | tee verify_after.txt
+make dbt-test</code></pre>
+
+      <p>Đích đến: <strong>4/4 tiêu chí đạt</strong>, và ba mã checksum của mỗi bảng giống hệt nhau.</p>
+
+      <p>Rồi tự kiểm tra sâu hơn mức mà verify làm — chạy thêm hai lượt nữa và xác nhận số hàng bất động.
+      Đây là bằng chứng idempotency thật, không chỉ là "pass ở đúng ba lượt":</p>
+      <pre><code>make pipeline && make pipeline
+q <span class="s">"select 'training' t, count(*) n from gold_training_set
+   union all select 'feature',    count(*) from gold_feature_daily
+   union all select 'chunks',     count(*) from gold_doc_chunks
+   union all select 'quarantine', count(*) from quarantine_tickets"</span></code></pre>
+
+      <ul class="steps">
+        <li><input type="checkbox" id="c-v1"><label for="c-v1">4/4 tiêu chí đạt</label></li>
+        <li><input type="checkbox" id="c-v2"><label for="c-v2">Checksum ba lượt giống hệt ở cả bốn bảng</label></li>
+        <li><input type="checkbox" id="c-v3"><label for="c-v3"><code>dbt test</code> pass toàn bộ</label></li>
+        <li><input type="checkbox" id="c-v4"><label for="c-v4">Lượt 4 và 5 không làm đổi số hàng</label></li>
+        <li><input type="checkbox" id="c-v5"><label for="c-v5">Đã lưu <code>verify_after.txt</code> để dán vào báo cáo</label></li>
+      </ul>
+    </section>
+
+    <!-- ============================================================ 07 -->
+    <section id="s7">
+      <h2><span class="sec-num">07</span>Bài thưởng A — Query dashboard chậm</h2>
+      <p class="lede">25 phút · +5 điểm · Small-file problem và partition pruning.</p>
+
+      <div class="ticket">
+        <span class="tno">Phiếu sự cố #1052</span>
+        <p>"Dashboard của đội CSKH mất 38 giây mới load. Ba tháng trước chỉ 2 giây.
+        Không ai sửa dòng code nào."</p>
+      </div>
+
+      <p>Bài này cần thêm dữ liệu (~30 giây, tạo 5.000 file Parquet nhỏ):</p>
+      <pre><code>make seed-extra</code></pre>
+      <div class="warn-box">
+        <span class="box-label">Lưu ý</span>
+        <p>Chỉ chạy khi bạn thật sự làm bài mở rộng. Nếu đã chạy rồi mà sau đó gọi <code>make seed</code>,
+        dữ liệu này bị xoá — phải chạy lại <code>make seed-extra</code>.</p>
+      </div>
+
+      <h4>A.1 · Đo trước khi sửa</h4>
+      <pre><code>make explain              <span class="c"># rows scanned, rows on disk, files, result hash</span>
+make plan                 <span class="c"># in thêm cây EXPLAIN ANALYZE</span>
+ls data/gold_events | wc -l
+du -sh data/gold_events</code></pre>
+      <p>Ghi ba con số vào báo cáo: <code>rows scanned</code>, <code>files</code>, <code>rows on disk</code>.</p>
+
+      <div class="note">
+        <span class="box-label">Vì sao "rows scanned" lớn hơn "rows on disk"</span>
+        <p>DuckDB đọc Parquet theo lô và làm tròn <em>lên</em> theo từng file: một file vài chục hàng vẫn
+        tốn khối lượng đọc tương đương khoảng 1.000 hàng. Chênh lệch đó chính là small-file problem
+        hiện hình thành một con số.</p>
+        <p>Bài này chấm theo <code>rows scanned</code> chứ không theo thời gian, vì thời gian phụ thuộc
+        cấu hình máy và trạng thái cache. <code>tools/explain.py</code> cũng ép <code>threads = 1</code>
+        để mọi máy ra cùng một số.</p>
+      </div>
+
+      <h4>A.2 · Đối chiếu filter với storage layout</h4>
+      <p>Mở <code>queries/dashboard.sql</code> và tự trả lời:</p>
+      <ol>
+        <li>Query filter theo những cột nào? (có hai điều kiện)</li>
+        <li>Tên file trong <code>data/gold_events/</code> có mang thông tin của cột nào không?</li>
+        <li>Nhìn dạng của điều kiện lọc theo ngày: cột đang bị bọc trong cái gì? Engine có so được
+          kết quả của một function call với tên thư mục partition không? Với min/max statistics của
+          row group thì sao?</li>
+      </ol>
+      <p>Nếu path không mang thông tin filter, engine buộc phải mở toàn bộ file rồi mới biết file nào
+      có ích. Cần viết lại sao cho <strong>cột đứng một mình ở một vế</strong> — thuật ngữ là
+      <em>sargable predicate</em>.</p>
+
+      <h4>A.3 · Sửa</h4>
+      <p>Hiện thực <code>tools/compact.py</code> — khung <code>COPY ... TO ...</code> và ba quyết định cần lý giải
+      đã có sẵn trong docstring của file. Sau đó sửa <code>queries/dashboard.sql</code> trỏ vào dataset mới,
+      bật <code>hive_partitioning</code>, và viết lại điều kiện filter.</p>
+
+      <p>Ba quyết định, mỗi cái cần một lý do viết được ra giấy:</p>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Quyết định</th><th>Câu hỏi tự trả lời</th></tr></thead>
+          <tbody>
+            <tr><td><code>PARTITION_BY</code></td><td>Cột nào của query nên xuất hiện trong tên thư mục? Cột đó có bao nhiêu giá trị phân biệt — tức bao nhiêu thư mục? Partition theo cột có 650 giá trị thì hệ quả là gì?</td></tr>
+            <tr><td><code>ORDER BY</code></td><td>Thứ tự hàng quyết định min/max của mỗi row group có ích hay vô dụng. Sắp thế nào để hàng cùng một khách hàng nằm liền nhau?</td></tr>
+            <tr><td><code>ROW_GROUP_SIZE</code></td><td>Mặc định là 122.880 hàng. Một ngày có khoảng bao nhiêu hàng? Nếu cả ngày gói gọn trong MỘT row group thì min/max của nó phủ những gì, và còn tác dụng lọc không?</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <pre><code>make compact
+make explain</code></pre>
+
+      <div class="warn-box">
+        <span class="box-label">Sai hướng hay gặp</span>
+        <p>Thêm index. Parquet trên đĩa <em>không có</em> index. Thứ duy nhất bạn điều khiển được là
+        <strong>file nằm ở đâu</strong> và <strong>hàng nằm theo thứ tự nào trong file</strong>.</p>
+      </div>
+
+      <h4>Đạt khi</h4>
+      <ul class="steps">
+        <li><input type="checkbox" id="c-ea1"><label for="c-ea1"><code>rows scanned</code> giảm tối thiểu <strong>10 lần</strong> so với baseline</label></li>
+        <li><input type="checkbox" id="c-ea2"><label for="c-ea2"><code>files</code> giảm từ 5.000 xuống hàng chục</label></li>
+        <li><input type="checkbox" id="c-ea3"><label for="c-ea3"><code>result hash</code> <strong>không đổi</strong> — nếu đổi, ngữ nghĩa query đã bị sửa và bài này không được tính điểm</label></li>
+        <li><input type="checkbox" id="c-ea4"><label for="c-ea4">Đã thêm <code>assert</code> kiểm tra dataset mới không mất hàng nào</label></li>
+      </ul>
+    </section>
+
+    <!-- ============================================================ 08 -->
+    <section id="s8">
+      <h2><span class="sec-num">08</span>Bài thưởng B — Consumer gặp sự cố giữa batch</h2>
+      <p class="lede">20 phút · +5 điểm · Delivery semantics. Bài này <strong>không</strong> cần <code>make seed-extra</code>.</p>
+
+      <h4>B.1 · Tái hiện</h4>
+      <pre><code>make crash-test</code></pre>
+      <p>Lệnh này kill tiến trình consumer ở giữa một batch ghi rồi khởi động lại, sau đó đối chiếu số hàng.
+      Đọc kết quả: bạn <strong>mất</strong> hàng hay bị <strong>trùng</strong> hàng? Con số đó xác định
+      consumer đang ở ngữ nghĩa nào.</p>
+
+      <h4>B.2 · Phân tích thứ tự thao tác</h4>
+      <p>Mở <code>ingest/consumer.py</code>, đọc khối <code>KHUNG THỰC HIỆN</code> ở đầu file và khối được
+      đánh dấu trong hàm <code>consume()</code>:</p>
+      <pre><code>consumer.commit()                 <span class="c"># commit offset</span>
+maybe_crash(batch_no, crash_at)   <span class="c"># sự cố xảy ra tại đây</span>
+write_batch(con, batch)           <span class="c"># ghi dữ liệu</span></code></pre>
+
+      <p>Tự trả lời:</p>
+      <ul>
+        <li>Nếu tiến trình chết tại <code>maybe_crash()</code>, batch hiện tại đã được ghi chưa?
+          Offset đã dịch chưa? Lần restart sẽ đọc từ đâu?</li>
+        <li>Nếu đảo thứ tự thành ghi trước, commit sau, lần restart sẽ đọc lại batch đó.
+          Với câu <code>INSERT</code> hiện tại, hệ quả là gì?</li>
+      </ul>
+
+      <div class="key">
+        <span class="box-label">Ba ngữ nghĩa giao vận</span>
+        <p><strong>at-most-once</strong> — commit offset TRƯỚC khi ghi → crash = <span class="fail">mất dữ liệu</span><br>
+        <strong>at-least-once</strong> — commit offset SAU khi ghi → crash = <span class="warn" style="color:var(--warn)">trùng dữ liệu</span><br>
+        <strong>exactly-once</strong> — <em>không tồn tại</em> ở tầng transport</p>
+        <p>Thứ chọn được là <strong>at-least-once cộng với một phép ghi idempotent</strong>. Đó là hai hạng mục
+        bạn phải làm, thiếu một là chưa đủ.</p>
+      </div>
+
+      <h4>B.3 · Phép ghi idempotent</h4>
+      <p>DuckDB hỗ trợ <code>insert ... on conflict (...) do update set ...</code>, nhưng <strong>chỉ khi</strong>
+      cột key có ràng buộc <code>primary key</code> hoặc <code>unique</code>. Xem hằng <code>DDL</code> ở đầu file —
+      bạn sẽ phải sửa cả nó.</p>
+
+      <p><strong>Câu hỏi cho báo cáo:</strong> <code>DO UPDATE</code> khác <code>DO NOTHING</code> ở điểm nào khi một
+      message được replay với nội dung <em>đã đổi</em>? Bạn chọn cái nào, vì sao?</p>
+
+      <details>
+        <summary>Gợi ý — chỉ mở sau khi đã tự thử</summary>
+        <div class="details-body">
+          <p>Hai hạng mục: <strong>(a)</strong> đảo thứ tự trong <code>consume()</code> thành ghi → crash → commit;
+          <strong>(b)</strong> thêm <code>primary key</code> cho cột <code>event_id</code> trong <code>DDL</code> rồi
+          đổi <code>INSERT</code> thuần thành <code>on conflict ... do update set ...</code> cho mọi cột còn lại.</p>
+          <p>Về <code>DO UPDATE</code> vs <code>DO NOTHING</code>: cả hai đều cho đúng <em>số hàng</em> —
+          không bản ghi trùng nào được tạo ra. Khác biệt nằm ở <em>nội dung</em>. <code>DO NOTHING</code> giữ
+          nguyên bản cũ, nên nếu message được phát lại mang giá trị đã cập nhật thì kho đọng lại phiên bản
+          lỗi thời và âm thầm lệch khỏi nguồn. <code>DO UPDATE</code> đưa kho hội tụ về trạng thái mới nhất.
+          Chọn cái nào phụ thuộc bản ghi có bất biến theo thiết kế hay không — và bạn phải nêu được lý do.</p>
+        </div>
+      </details>
+
+      <h4>Đạt khi</h4>
+      <ul class="steps">
+        <li><input type="checkbox" id="c-eb1"><label for="c-eb1"><code>make crash-test</code> báo <strong>ĐẠT</strong> — không mất, không trùng, kết quả sau sự cố bằng đúng kết quả chạy một mạch</label></li>
+        <li><input type="checkbox" id="c-eb2"><label for="c-eb2"><code>make verify</code> vẫn 4/4 — ba nhiệm vụ chính không bị ảnh hưởng</label></li>
+      </ul>
+    </section>
+
+    <!-- ============================================================ 09 -->
+    <section id="s9">
+      <h2><span class="sec-num">09</span>Viết báo cáo — 20 điểm</h2>
+
+      <p class="lede">Đây là phần bị mất điểm nhiều nhất, và cũng là phần dễ lấy điểm nhất nếu bạn
+      đã ghi chép trong lúc làm.</p>
+
+      <h3>Phân biệt "cách sửa" và "nguyên nhân"</h3>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Cách viết</th><th>Ví dụ</th><th class="num">Điểm</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><span class="fail">✗ Chỉ nêu thao tác</span></td>
+              <td><em>"Tôi thêm <code>unique_key='ticket_id'</code> vào config."</em></td>
+              <td class="num"><span class="fail">1</span></td>
+            </tr>
+            <tr>
+              <td><span class="pass">✓ Phát biểu cơ chế</span></td>
+              <td><em>"Source CDC chứa bản ghi <code>op='u'</code>, nhưng incremental model không khai key nên
+              dbt generate câu <code>INSERT</code>; chạy lại partition sẽ ghi thêm dòng thay vì ghi đè."</em></td>
+              <td class="num"><span class="pass">6</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Khác biệt: câu thứ hai trả lời <strong>vì sao</strong> hiện tượng xảy ra, và nếu đọc nó thì người
+      khác có thể ngăn lỗi tái diễn ở một bảng khác. Câu thứ nhất chỉ mô tả bạn đã gõ gì.</p>
+
+      <h3>Cấu trúc bắt buộc — bốn mục cho mỗi nhiệm vụ</h3>
+      <ol>
+        <li><strong>Triệu chứng</strong> — hiện tượng quan sát được từ phía vận hành</li>
+        <li><strong>Nguyên nhân</strong> — cơ chế gây ra, phát biểu rõ trong một đến hai câu</li>
+        <li><strong>Cách khắc phục</strong> — sửa cái gì, ở những file nào</li>
+        <li><strong>Bằng chứng</strong> — số liệu đo đạc trước / sau fix</li>
+      </ol>
+
+      <h3>Bảng số liệu bạn cần gom đủ</h3>
+      <p>Điền bảng này trong lúc làm, đừng để đến cuối:</p>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Cần cho</th><th>Số liệu</th><th>Lấy ở đâu</th></tr></thead>
+          <tbody>
+            <tr><td>Mục 0</td><td>Output <code>make verify</code> ba lượt</td><td><code>verify_after.txt</code></td></tr>
+            <tr><td>Nhiệm vụ 1</td><td>Số hàng trước / sau · ba mã checksum trước / sau</td><td><code>verify_before.txt</code> và <code>verify_after.txt</code></td></tr>
+            <tr><td>Nhiệm vụ 1</td><td>Số bản ghi <code>op='u'</code> trong CDC</td><td>Query điều tra bước 1</td></tr>
+            <tr><td>Nhiệm vụ 2</td><td><strong>Giá trị P99</strong> <em>(bắt buộc)</em> · p95 · max · % bản ghi trễ &gt; 1 ngày</td><td>Query đo P99</td></tr>
+            <tr><td>Nhiệm vụ 2</td><td>Lookback đã chọn và <strong>lý do</strong> chọn theo P99 chứ không theo max</td><td>Bạn tự lập luận</td></tr>
+            <tr><td>Nhiệm vụ 3</td><td>Số bản ghi mỗi nhóm trong ba nhóm giá trị</td><td>Query <code>priority_raw</code></td></tr>
+            <tr><td>Nhiệm vụ 3</td><td>Số hàng quarantine · số test dbt pass · phân bố priority sau fix</td><td><code>make verify</code>, <code>make dbt-test</code></td></tr>
+            <tr><td>Thưởng A</td><td><code>rows scanned</code> <strong>trước và sau</strong> · files · result hash</td><td><code>make explain</code></td></tr>
+            <tr><td>Thưởng B</td><td>Số hàng mất trước fix · số hàng sau fix</td><td><code>make crash-test</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Ba câu hỏi luận phải trả lời</h3>
+      <p>Đây là nơi phân biệt bài 15 điểm và bài 20 điểm. Viết bằng lời của bạn:</p>
+      <ol>
+        <li><strong>Nhiệm vụ 2:</strong> Vì sao chọn P99 làm căn cứ thay vì <code>max</code>?
+          Chi phí của mỗi lựa chọn là gì?</li>
+        <li><strong>Nhiệm vụ 3:</strong> Nên chặn ở tầng Bronze hay Silver? Vì sao <em>không</em> để
+          pipeline dừng khi gặp bản ghi lỗi?</li>
+        <li><strong>Thưởng B:</strong> <code>DO UPDATE</code> khác <code>DO NOTHING</code> ở đâu khi
+          message được replay với nội dung đã đổi?</li>
+      </ol>
+
+      <h3>Mục cuối — bảng tổng kết</h3>
+      <p>Template có một bảng ba dòng: <em>"Khi tiếp nhận một hệ thống chưa quen, tôi sẽ kiểm tra điều này
+      trước tiên"</em>. Đừng bỏ qua — đây là chỗ bạn chứng minh mình rút ra được nguyên tắc chứ không chỉ
+      sửa xong ba lỗi. Gợi ý hướng nghĩ: với mỗi nhiệm vụ, phép kiểm tra <em>rẻ nhất</em> mà lẽ ra người
+      bàn giao nên chạy để phát hiện sự cố này từ đầu là gì?</p>
+
+      <div class="note">
+        <span class="box-label">Sợi chỉ xuyên suốt cả ba nhiệm vụ</span>
+        <p>Nếu báo cáo của bạn nêu được điểm chung này, nó sẽ nổi bật: cả ba sự cố đều
+        <strong>không sinh lỗi</strong> và đều lọt qua <code>dbt test</code> ban đầu. Thứ nguy hiểm trong
+        data pipeline không phải job đỏ — job đỏ có người xử lý ngay — mà là job xanh đang âm thầm
+        nhân bản, bỏ sót hoặc vứt bỏ dữ liệu.</p>
+      </div>
+
+      <ul class="steps">
+        <li><input type="checkbox" id="c-r1"><label for="c-r1">Copy <code>REPORT_TEMPLATE.md</code> thành <code>REPORT.md</code> và điền</label></li>
+        <li><input type="checkbox" id="c-r2"><label for="c-r2">Mục 0: dán nguyên output <code>make verify</code></label></li>
+        <li><input type="checkbox" id="c-r3"><label for="c-r3">Mỗi nhiệm vụ có đủ bốn mục, phần "Nguyên nhân" nói về <em>cơ chế</em></label></li>
+        <li><input type="checkbox" id="c-r4"><label for="c-r4">Nhiệm vụ 2 có <strong>giá trị P99</strong> đo được</label></li>
+        <li><input type="checkbox" id="c-r5"><label for="c-r5">Ba câu hỏi luận đã trả lời</label></li>
+        <li><input type="checkbox" id="c-r6"><label for="c-r6">Bảng tổng kết ba dòng đã điền</label></li>
+      </ul>
+    </section>
+
+    <!-- ============================================================ 10 -->
+    <section id="s10">
+      <h2><span class="sec-num">10</span>Nộp bài &amp; tự kiểm lần cuối</h2>
+
+      <p>Ba thứ cần nộp:</p>
+      <ol>
+        <li><strong>Repo đã chỉnh sửa</strong> — link Git hoặc file nén. Chạy <code>make clean</code> trước khi nén.</li>
+        <li><strong>Kết quả <code>make verify</code></strong> — dán nguyên output ba lượt chạy.</li>
+        <li><strong>Báo cáo một trang</strong> theo <code>REPORT_TEMPLATE.md</code>.</li>
+      </ol>
+
+      <h3>Checklist cuối</h3>
+      <ul class="steps">
+        <li><input type="checkbox" id="c-f1"><label for="c-f1"><code>make verify</code> từ trạng thái sạch → 4/4 tiêu chí đạt</label></li>
+        <li><input type="checkbox" id="c-f2"><label for="c-f2">Không còn <code>TODO</code> nào chưa xử lý trong các file đã sửa</label></li>
+        <li><input type="checkbox" id="c-f3"><label for="c-f3">Báo cáo nói về <strong>cơ chế</strong>, không chỉ liệt kê thao tác</label></li>
+        <li><input type="checkbox" id="c-f4"><label for="c-f4">Giá trị P99 có trong báo cáo</label></li>
+        <li><input type="checkbox" id="c-f5"><label for="c-f5">Đã chạy <code>make clean</code> trước khi nén</label></li>
+      </ul>
+    </section>
+
+    <!-- ============================================================ 11 -->
+    <section id="s11">
+      <h2><span class="sec-num">11</span>Mini quiz — tự kiểm hiểu biết</h2>
+      <p class="lede">Trả lời được cả bốn câu này nghĩa là bạn nắm được cơ chế, không chỉ nhớ được thao tác.</p>
+
+      <p class="q">1. Vì sao xoá partition của một ngày rồi ghi lại <em>không</em> giải quyết được vấn đề nhân bản ở <code>gold_training_set</code>?</p>
+      <details>
+        <summary>Xem đáp án</summary>
+        <div class="details-body">
+          <p class="a">Vì một ticket có thể được cập nhật ở nhiều ngày khác nhau, nên các bản sao của nó nằm
+          rải ở nhiều partition. Xoá partition của một ngày chỉ dọn được bản sao trong ngày đó; các bản sao
+          ở ngày khác vẫn còn nguyên. Phải khớp theo khoá của entity, không phải theo ngày.</p>
+        </div>
+      </details>
+
+      <p class="q">2. Khi nới lookback 3 ngày cho <code>gold_feature_daily</code>, điều kiện bắt buộc đi kèm là gì?</p>
+      <details>
+        <summary>Xem đáp án</summary>
+        <div class="details-body">
+          <p class="a">Phải khai composite key <code>['event_date', 'customer_id']</code> với chiến lược
+          <code>merge</code>. Không có nó, cùng một cặp ngày–khách hàng được tính lại ở nhiều lượt chạy sẽ
+          cộng dồn thay vì thay thế, và bảng mất tính ổn định ngay từ lượt thứ hai.</p>
+        </div>
+      </details>
+
+      <p class="q">3. Vì sao phải lọc dữ liệu rác <em>trước</em> <code>row_number()</code> trong <code>silver_tickets</code>?</p>
+      <details>
+        <summary>Xem đáp án</summary>
+        <div class="details-body">
+          <p class="a">Để giữ lại trạng thái hợp lệ cũ của một ticket nếu bản ghi mới nhất của nó bị lỗi.
+          Lọc sau khi xếp hạng sẽ loại cả <em>ticket</em> ra khỏi Silver; lọc trước chỉ loại <em>bản ghi</em>
+          hỏng, ticket vẫn còn với giá trị của lần cập nhật hợp lệ gần nhất.</p>
+        </div>
+      </details>
+
+      <p class="q">4. Vì sao không để pipeline dừng lại khi gặp một bản ghi rác?</p>
+      <details>
+        <summary>Xem đáp án</summary>
+        <div class="details-body">
+          <p class="a">Vì tách rác vào quarantine cho phép 99,9% dữ liệu sạch tiếp tục phục vụ các hệ AI ở
+          hạ nguồn, còn phần hỏng được giữ lại kèm lý do trong một hàng đợi để đội trực xử lý sau. Dừng cả
+          DAG biến một sự cố chất lượng cục bộ thành sự cố ngừng dịch vụ toàn hệ thống.</p>
+        </div>
+      </details>
+    </section>
+
+    <!-- ============================================================ 12 -->
+    <section id="s12">
+      <h2><span class="sec-num">12</span>Khi bị kẹt</h2>
+
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Triệu chứng</th><th>Nghĩ theo hướng này</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>Số hàng đúng ở lượt 1 nhưng tăng ở lượt 2</td>
+              <td>Điều kiện lọc đã nới nhưng thiếu <code>unique_key</code> + <code>merge</code>. Kinh điển ở Nhiệm vụ 2.</td>
+            </tr>
+            <tr>
+              <td><code>silver_tickets</code> tụt xuống 12.168 ticket</td>
+              <td>Bạn đang lọc <em>sau</em> <code>row_number()</code>. Chuyển bước lọc lên trước bước xếp hạng.</td>
+            </tr>
+            <tr>
+              <td><code>quarantine_tickets</code> lên hàng nghìn hàng</td>
+              <td>Macro đang xử lý nhãn chữ (nhóm 2) như dữ liệu hỏng (nhóm 3). Kiểm tra lại các nhánh <code>when</code>.</td>
+            </tr>
+            <tr>
+              <td><code>dbt test</code> fail ở <code>accepted_values</code></td>
+              <td>Vẫn còn giá trị ngoài 1..4 lọt vào Silver — thường là <code>'0'</code>, <code>'5'</code>, <code>'-1'</code> đi qua vì chúng cast được sang số.</td>
+            </tr>
+            <tr>
+              <td>Sửa xong Nhiệm vụ 2 thì Nhiệm vụ 1 hỏng</td>
+              <td>Chạy <code>make clean &amp;&amp; make verify</code> để loại trừ ảnh hưởng của kho cũ, rồi đọc lại <code>config()</code> của cả hai model.</td>
+            </tr>
+            <tr>
+              <td>Không hiểu dbt đang sinh SQL gì</td>
+              <td>Mở <code>dbt/target/run/lab17/models/.../&lt;model&gt;.sql</code> — đó là câu lệnh thật chạy trên DuckDB.</td>
+            </tr>
+            <tr>
+              <td>Extra A: <code>result hash</code> bị đổi</td>
+              <td>Query đã đổi ngữ nghĩa, không chỉ đổi cách đọc dữ liệu. Kiểm tra lại điều kiện lọc ngày có tương đương với bản gốc không.</td>
+            </tr>
+            <tr>
+              <td>Muốn làm lại từ đầu</td>
+              <td><code>make clean</code> xoá kho + target dbt. <code>make reset</code> chỉ xoá kho, giữ seed.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <hr>
+
+      <h3>Bốn tài liệu trong repo</h3>
+      <ul>
+        <li><code>README.md</code> — bối cảnh và yêu cầu</li>
+        <li><code>GUIDE.md</code> — trình tự thao tác từng nhiệm vụ</li>
+        <li><code>RUBRIC.md</code> — thang điểm 100 chi tiết, có bảng tự chấm</li>
+        <li><code>EXTRA.md</code> — hai bài mở rộng</li>
+      </ul>
+
+      <div class="warn-box">
+        <span class="box-label">GUIDE.md có bốn chỗ lỗi thời — đã đối chiếu với source code</span>
+        <p>Lab từng có 5 nhiệm vụ, sau đó được rút gọn còn 3 (nhiệm vụ 4 và 5 cũ trở thành bài
+        thưởng A và B). <code>GUIDE.md</code> chưa cập nhật hết. Bốn chỗ cần bỏ qua:</p>
+        <ul>
+          <li><strong>"<code>make setup</code> ghi baseline vào <code>expected/dashboard_baseline.json</code>"</strong> —
+            không đúng. Đọc <code>Makefile</code>: <code>setup</code> chỉ gọi <code>seed/generate.py</code>.
+            Việc ghi baseline nằm ở <code>make seed-extra</code>, và file baseline vốn đã được commit sẵn trong repo.</li>
+          <li><strong>"<code>make setup</code> sinh lại <code>data/gold_events/</code>"</strong> —
+            không đúng. <code>generate.py</code> chỉ tạo thư mục đó khi có cờ <code>--extra</code>,
+            tức chỉ qua <code>make seed-extra</code>.</li>
+          <li><strong>"Root cause chiếm toàn bộ <em>10 điểm</em> cuối"</strong> — sai số.
+            <code>RUBRIC.md</code> và <code>README.md</code> đều ghi mục Báo cáo là <strong>20 điểm</strong>.</li>
+          <li><strong>Gọi bài thưởng là "nhiệm vụ 4 / nhiệm vụ 5"</strong> — tên cũ.
+            <code>README.md</code>, <code>EXTRA.md</code> và <code>RUBRIC.md</code> gọi là
+            <em>bài mở rộng A / B</em>.</li>
+        </ul>
+        <p>Phần còn lại của <code>GUIDE.md</code> chính xác và hữu ích — đặc biệt mục 1.5
+        (vì sao hai tham số DAG không phải root cause), mục 2.2 (query tìm chính xác cặp bị thiếu)
+        và Phụ lục A. Runbook này đã tiếp thu cả ba.</p>
+      </div>
+
+      <p><strong>Khi hai tài liệu mâu thuẫn:</strong> tin <code>RUBRIC.md</code> cho điểm số,
+      <code>README.md</code> cho yêu cầu, và <strong>source code cho hành vi thực tế</strong> —
+      <code>Makefile</code>, <code>tools/verify.py</code>, <code>seed/generate.py</code> là thứ
+      quyết định bài bạn được chấm ra sao.</p>
+      <p>Và nhớ: khung pseudo-code của mỗi nhiệm vụ nằm ngay trong file cần sửa, dưới dạng chú thích
+      <code>KHUNG THỰC HIỆN</code>.</p>
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    LAB 17 · Data Pipeline Engineering — runbook tự thực hiện
+  </footer>
+</div>
+
+<script>
+  (function () {
+    var boxes = Array.prototype.slice.call(document.querySelectorAll('.steps input[type="checkbox"]'));
+    var fill = document.getElementById('prog-fill');
+    var text = document.getElementById('prog-text');
+    var KEY = 'lab17-runbook-progress';
+
+    function load() {
+      try {
+        var saved = JSON.parse(localStorage.getItem(KEY) || '{}');
+        boxes.forEach(function (b) { if (saved[b.id]) b.checked = true; });
+      } catch (e) { /* bộ nhớ cục bộ không dùng được — bỏ qua, checkbox vẫn hoạt động */ }
+    }
+
+    function save() {
+      try {
+        var state = {};
+        boxes.forEach(function (b) { if (b.checked) state[b.id] = 1; });
+        localStorage.setItem(KEY, JSON.stringify(state));
+      } catch (e) { /* bỏ qua */ }
+    }
+
+    function render() {
+      var done = boxes.filter(function (b) { return b.checked; }).length;
+      text.textContent = done + ' / ' + boxes.length + ' bước';
+      fill.style.width = (boxes.length ? (done / boxes.length) * 100 : 0) + '%';
+    }
+
+    boxes.forEach(function (b) {
+      b.addEventListener('change', function () { save(); render(); });
+    });
+
+    load();
+    render();
+  })();
+</script>

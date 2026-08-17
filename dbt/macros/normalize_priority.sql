@@ -45,16 +45,25 @@
 #}
 
 {% macro normalize_priority(col) %}
-    -- TODO(nhiệm vụ 3): thay biểu thức dưới đây bằng một khối CASE xử lý
-    -- đủ ba nhóm ở trên.
-    --
-    --     case
-    --         when <nhóm 1: đã là số hợp lệ>  then <giữ nguyên>
-    --         when <nhóm 2: nhãn chữ>         then <số tương ứng>
-    --         ...
-    --         else null                        -- nhóm 3
-    --     end
-    try_cast({{ col }} as integer)
+    case lower(trim(cast({{ col }} as varchar)))
+        -- Nhóm 1 — đúng contract cũ, giữ nguyên giá trị.
+        -- Liệt kê tường minh 1..4 thay vì try_cast, để '0', '5', '-1' KHÔNG
+        -- lọt qua: chúng đúng là số nhưng nằm ngoài miền contract.
+        when '1' then 1
+        when '2' then 2
+        when '3' then 3
+        when '4' then 4
+        -- Nhóm 2 — schema evolution. Từ 2026-08-10 backend đổi sang nhãn chữ;
+        -- ý nghĩa KHÔNG đổi, chỉ đổi cách biểu diễn. Theo tài liệu API:
+        when 'urgent' then 1
+        when 'high'   then 2
+        when 'medium' then 3
+        when 'low'    then 4
+        -- Nhóm 3 — 'P1', 'P2', 'unknown', '0', '5', '-1', '', NULL: hỏng thật.
+        -- NULL ở đây là TÍN HIỆU "không hợp lệ"; quarantine_tickets dùng chính
+        -- tín hiệu này để nhặt bản ghi lỗi ra.
+        else null
+    end
 {% endmacro %}
 
 
@@ -64,6 +73,13 @@
     hơn (rỗng / NULL / là số nhưng ngoài khoảng / là chuỗi lạ).
 #}
 {% macro priority_reject_reason(col) %}
-    -- TODO(nhiệm vụ 3, không bắt buộc): phân biệt các loại lỗi khác nhau.
-    'priority không quy đổi được về 1..4'
+    case
+        when {{ col }} is null
+            then 'priority NULL — nguồn không gửi giá trị'
+        when trim(cast({{ col }} as varchar)) = ''
+            then 'priority rỗng — nguồn gửi chuỗi trắng'
+        when try_cast(trim(cast({{ col }} as varchar)) as integer) is not null
+            then 'priority là số nhưng ngoài miền 1..4 của contract'
+        else 'priority là chuỗi lạ, không thuộc bảng nhãn urgent/high/medium/low'
+    end
 {% endmacro %}

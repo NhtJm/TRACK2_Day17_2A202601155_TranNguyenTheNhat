@@ -14,3 +14,6 @@ dbt/target/
 dbt/logs/
 dbt/dbt_packages/
 logs/
+
+# state nội bộ của công cụ dòng lệnh, không liên quan bài lab
+.omc/
